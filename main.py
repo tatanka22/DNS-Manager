@@ -25,6 +25,8 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.lastIp = "192.192.192.192"
         self.label_upsince_val.setText(current_time.toString())
         self.lbl_upsince_date_val.setText(current_date.toString('dd.MM.yyyy'))
+        #test
+        
 
     def set_button_clicked(self):
         self.iptid = int(self.lineEdit.text())
