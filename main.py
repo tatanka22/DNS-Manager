@@ -26,8 +26,10 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.label_upsince_val.setText(current_time.toString())
         self.lbl_upsince_date_val.setText(current_date.toString('dd.MM.yyyy'))
         #test
-        
 
+
+    #ny funk
+    
     def set_button_clicked(self):
         self.iptid = int(self.lineEdit.text())
         print('Satt ny ip-tid')
