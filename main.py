@@ -1,35 +1,54 @@
 from requests import get
 import sys
+import os
+from dotenv import load_dotenv
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5.QtCore import QTimer, QTime, QDate, QRegExp
 from PyQt5.QtGui import QRegExpValidator
 from MyGui import Ui_MainWindow
+from domeneshop import Client
+
+load_dotenv()
+
+TOKEN = os.getenv('d_shop_token')
+SECRET = os.getenv('s_shop_secret')
 
 class MyWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         QtWidgets.QMainWindow.__init__(self)
         Ui_MainWindow.__init__(self)
         self.setupUi(self)
-        # Timer for å oppatere vinduet og vise tiden. millisec.
+
+        self.api_client = Client(TOKEN, SECRET)
+
+        # Timer for å oppdatere vinduet og vise tiden. millisec.
         timer1 = QTimer(self)  
         timer1.timeout.connect(self.visTid)
         timer1.start(200)
+
         # Knapp for å sette tiden i sekunder mellom hver ip-sjekk
         self.btn_set_interval.clicked.connect(self.set_button_clicked)
         self.ip_tid = 120
         self.lineEdit.setText("120")
-        # self.lineEdit.textChanged.connect(self.test_change)
+
+        # button for domains
+        self.btn_domains.clicked.connect(self.get_domains)
+
         # Validator
         validator = QRegExpValidator(QRegExp(r'[0-9]+'))
         self.lineEdit.setValidator(validator)
+        
         # Diverse
         current_time = QTime.currentTime()
         current_date = QDate.currentDate()
+
         self.last_time = current_time
-        self.next_time = current_time
-        self.lbl_upsince_time_val.setText(current_time.toString('hh:mm:ss'))
-        self.lbl_upsince_date_val.setText(current_date.toString('dd.MM.yyyy'))
+        self.next_time = current_time #.addSecs(self.ip_tid)
+
+        self.upsince_time = current_time
+        self.upsince_date = current_date
+
         self.last_ip_date = "12.12.12"
         self.last_ip_time = "00:00:00"
         self.last_ip = "192.192.192.192"
@@ -41,33 +60,66 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         print(self.ip_tid)
 
     def ny_ip_actions(self):
-        print('Vi har fått ny ip')
+        # here we will put code for api
+        pass
+
+    def get_domains(self):
+        self.domains = self.api_client.get_domains()
+        for domain in self.domains:
+            print("*****")
+            
+            print("DNS records for {0}:".format(domain["domain"]))
+            print("id: {0}".format(domain["id"]))
+            
+            for record in self.api_client.get_records(domain["id"]):
+                print(record["id"], record["host"], record["type"], record["data"])
+
+        myRec = {"host": "test",
+                "ttl": 3600,
+                "type": "A",
+                "data": "62.24.36.27"}
+        #client.create_record(1834394, myRec)
 
     def visTid(self):
         current_time = QTime.currentTime()
         current_date = QDate.currentDate()
        
+        # prints time
         self.lbl_time_val.setText(current_time.toString('hh:mm:ss'))
-        self.lbl_date_val.setText(current_date.toString('dd.MM.yyyy'))
+        self.lbl_date_val.setText(current_date.toString('dddd dd.MM.yyyy'))
+
+        # prints upsince time
+        self.lbl_upsince_time_val.setText(self.upsince_time.toString('hh:mm:ss'))
+        self.lbl_upsince_date_val.setText(self.upsince_date.toString('dddd dd.MM.yyyy'))
+
+        # printer verdier i labels for last and next ip-check
         self.lbl_last_ipcheck_time_val.setText(self.last_time.toString())
         self.lbl_next_ipcheck_val.setText(self.next_time.toString())
 
-        if current_time >= self.next_time:  # Er det tid for ip-check?
-            self.last_time = current_time  # lastTime = tiden for siste sjekk
-            self.next_time = self.last_time.addSecs(self.ip_tid)
+        # prints values in label for ip
+        self.lbl_lastip_val.setText(self.last_ip)  
 
-            ip = get('https://api.ipify.org').content.decode('utf8')
-            self.lbl_lastip_val.setText(ip)
-            self.lbl_lastip_since_date_val.setText(self.last_ip_date)
+        if current_time >= self.next_time:  # Er det tid for ip-check?
+            # update last and next time for ip-check 
+            self.last_time = current_time 
+            self.next_time = self.last_time.addSecs(self.ip_tid)
+            # gets my ip
             print('sjekker-ip...')
+            self.last_ip = get('https://api.ipify.org').content.decode('utf8')
+
+            #self.lbl_lastip_val.setText(self.last_ip)
+            #self.lbl_lastip_since_date_val.setText(self.last_ip_date)
+            
 
             # Har vi ny IP?
             if self.lbl_lastip_val.text() == self.last_ip:
                 print('Vi har samme ip')
             else:
+                print('Vi har fått ny ip')
+                self.lbl_lastip_val.setText(self.last_ip)
                 self.last_ip_date = QDate.currentDate().toString('dd.MM.yyyy')   # lastIpate er for dagen vi fikk siste IP
                 self.lbl_lastip_since_date_val.setText(self.last_ip_date)
-                self.lastip_time = current_time.toString('hh:mm')             # lastIpTime er for når vi fikk siste IP
+                self.lastip_time = current_time.toString('hh:mm:ss')             # lastIpTime er for når vi fikk siste IP
                 self.lbl_lastip_since_time_val.setText(self.last_ip_time)
                 self.last_ip = self.lbl_lastip_val.text()
                 self.ny_ip_actions()

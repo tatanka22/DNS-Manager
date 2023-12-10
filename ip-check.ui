@@ -25,10 +25,11 @@
     </property>
     <property name="font">
      <font>
+      <family>Roboto</family>
       <pointsize>18</pointsize>
       <weight>75</weight>
       <bold>true</bold>
-      <underline>true</underline>
+      <underline>false</underline>
      </font>
     </property>
     <property name="text">
@@ -46,6 +47,7 @@
     </property>
     <property name="font">
      <font>
+      <family>Roboto</family>
       <pointsize>10</pointsize>
      </font>
     </property>
@@ -56,11 +58,16 @@
    <widget class="QLabel" name="lbl_lastipcheck">
     <property name="geometry">
      <rect>
-      <x>40</x>
-      <y>300</y>
+      <x>30</x>
+      <y>320</y>
       <width>130</width>
       <height>39</height>
      </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Roboto</family>
+     </font>
     </property>
     <property name="text">
      <string>Last ip-check:</string>
@@ -69,11 +76,16 @@
    <widget class="QLabel" name="lbl_last_ipcheck_time_val">
     <property name="geometry">
      <rect>
-      <x>130</x>
-      <y>300</y>
-      <width>80</width>
-      <height>39</height>
+      <x>110</x>
+      <y>330</y>
+      <width>91</width>
+      <height>16</height>
      </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Roboto</family>
+     </font>
     </property>
     <property name="text">
      <string>TextLabel</string>
@@ -90,6 +102,7 @@
     </property>
     <property name="font">
      <font>
+      <family>Roboto</family>
       <pointsize>12</pointsize>
       <weight>75</weight>
       <bold>true</bold>
@@ -102,11 +115,16 @@
    <widget class="QLabel" name="lbl_nextipcheck">
     <property name="geometry">
      <rect>
-      <x>40</x>
-      <y>320</y>
-      <width>130</width>
-      <height>50</height>
+      <x>30</x>
+      <y>350</y>
+      <width>131</width>
+      <height>21</height>
      </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Roboto</family>
+     </font>
     </property>
     <property name="text">
      <string>Next ip-check</string>
@@ -115,11 +133,16 @@
    <widget class="QLabel" name="lbl_next_ipcheck_val">
     <property name="geometry">
      <rect>
-      <x>130</x>
-      <y>320</y>
-      <width>80</width>
-      <height>50</height>
+      <x>110</x>
+      <y>350</y>
+      <width>81</width>
+      <height>21</height>
      </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Roboto</family>
+     </font>
     </property>
     <property name="text">
      <string>TextLabel</string>
@@ -133,6 +156,11 @@
       <width>111</width>
       <height>21</height>
      </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Roboto</family>
+     </font>
     </property>
     <property name="text">
      <string>Since:</string>
@@ -149,6 +177,7 @@
     </property>
     <property name="font">
      <font>
+      <family>Roboto</family>
       <pointsize>8</pointsize>
       <weight>50</weight>
       <bold>false</bold>
@@ -169,6 +198,11 @@
       <height>20</height>
      </rect>
     </property>
+    <property name="font">
+     <font>
+      <family>Roboto</family>
+     </font>
+    </property>
     <property name="text">
      <string>12.12.1923</string>
     </property>
@@ -181,6 +215,11 @@
       <width>111</width>
       <height>21</height>
      </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Roboto</family>
+     </font>
     </property>
     <property name="text">
      <string>Up since:</string>
@@ -197,10 +236,11 @@
     </property>
     <property name="font">
      <font>
+      <family>Roboto</family>
       <pointsize>18</pointsize>
       <weight>75</weight>
       <bold>true</bold>
-      <underline>true</underline>
+      <underline>false</underline>
       <kerning>false</kerning>
      </font>
     </property>
@@ -213,12 +253,13 @@
      <rect>
       <x>420</x>
       <y>50</y>
-      <width>71</width>
+      <width>121</width>
       <height>21</height>
      </rect>
     </property>
     <property name="font">
      <font>
+      <family>Roboto</family>
       <pointsize>10</pointsize>
      </font>
     </property>
@@ -230,10 +271,15 @@
     <property name="geometry">
      <rect>
       <x>470</x>
-      <y>330</y>
+      <y>340</y>
       <width>41</width>
       <height>23</height>
      </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Roboto</family>
+     </font>
     </property>
     <property name="text">
      <string>Set</string>
@@ -246,7 +292,7 @@
     <property name="geometry">
      <rect>
       <x>370</x>
-      <y>330</y>
+      <y>350</y>
       <width>61</width>
       <height>20</height>
      </rect>
@@ -256,6 +302,11 @@
       <width>80</width>
       <height>16777215</height>
      </size>
+    </property>
+    <property name="font">
+     <font>
+      <family>Roboto</family>
+     </font>
     </property>
     <property name="toolTip">
      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;test&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -271,10 +322,15 @@
     <property name="geometry">
      <rect>
       <x>440</x>
-      <y>330</y>
+      <y>350</y>
       <width>21</width>
       <height>21</height>
      </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Roboto</family>
+     </font>
     </property>
     <property name="text">
      <string>s.</string>
@@ -284,10 +340,15 @@
     <property name="geometry">
      <rect>
       <x>370</x>
-      <y>300</y>
+      <y>320</y>
       <width>81</width>
       <height>31</height>
      </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Roboto</family>
+     </font>
     </property>
     <property name="text">
      <string>IP-check every:</string>
@@ -301,6 +362,11 @@
       <width>151</width>
       <height>91</height>
      </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Roboto</family>
+     </font>
     </property>
     <property name="text">
      <string/>
@@ -323,11 +389,25 @@
     </property>
     <property name="font">
      <font>
+      <family>Roboto</family>
       <pointsize>12</pointsize>
      </font>
     </property>
     <property name="text">
      <string>Current IP</string>
+    </property>
+   </widget>
+   <widget class="QPushButton" name="btn_domains">
+    <property name="geometry">
+     <rect>
+      <x>440</x>
+      <y>290</y>
+      <width>75</width>
+      <height>23</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Domains</string>
     </property>
    </widget>
   </widget>
