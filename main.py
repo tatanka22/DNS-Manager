@@ -3,16 +3,31 @@ import sys
 import os
 from dotenv import load_dotenv
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QApplication, QMainWindow
+from PyQt5.QtWidgets import QApplication, QMainWindow,QCheckBox
 from PyQt5.QtCore import QTimer, QTime, QDate, QRegExp
-from PyQt5.QtGui import QRegExpValidator
+from PyQt5.QtGui import QRegExpValidator, QStandardItem, QColor, QFont, QStandardItemModel
 from MyGui import Ui_MainWindow
 from domeneshop import Client
 
 load_dotenv()
-
+# api-credentials for domeneshop api
 TOKEN = os.getenv('d_shop_token')
 SECRET = os.getenv('s_shop_secret')
+
+class StandardItem(QStandardItem):
+    def __init__(self, txt='', font_size=12, set_bold=False, color=QColor(0,0,0)):
+        super().__init__()
+        
+        fnt = QFont('Open Sans', font_size)
+        fnt.setBold(set_bold)
+
+        self.setEditable(False)
+        self.setForeground(color)
+        self.setFont(fnt)
+        self.setText(txt)
+
+        self.check = QCheckBox('hallo')
+   
 
 class MyWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
@@ -44,7 +59,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         current_date = QDate.currentDate()
 
         self.last_time = current_time
-        self.next_time = current_time #.addSecs(self.ip_tid)
+        self.next_time = current_time 
 
         self.upsince_time = current_time
         self.upsince_date = current_date
@@ -64,21 +79,41 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         pass
 
     def get_domains(self):
+       
+        treeModel = QStandardItemModel()
+        rootNode = treeModel.invisibleRootItem()
+        self.treeView.setModel(treeModel)
+        self.treeView.setHeaderHidden(True)
+
+
         self.domains = self.api_client.get_domains()
         for domain in self.domains:
             print("*****")
-            
-            print("DNS records for {0}:".format(domain["domain"]))
+
+            dom_txt = format(domain["domain"])
+            domene = StandardItem(dom_txt, 12)
+            rootNode.appendRow(domene)
+
+            print("DNS records for {0}:" + dom_txt)
             print("id: {0}".format(domain["id"]))
             
             for record in self.api_client.get_records(domain["id"]):
                 print(record["id"], record["host"], record["type"], record["data"])
+                
+                if record["type"] == 'A' and record["host"] != '@' :
+                    min_record = StandardItem( record["host"] + "." + dom_txt , 10)
+                    domene.appendRow(min_record)
 
         myRec = {"host": "test",
                 "ttl": 3600,
                 "type": "A",
                 "data": "62.24.36.27"}
         #client.create_record(1834394, myRec)
+
+       
+              
+        
+
 
     def visTid(self):
         current_time = QTime.currentTime()
@@ -99,20 +134,15 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         # prints values in label for ip
         self.lbl_lastip_val.setText(self.last_ip)  
 
-        if current_time >= self.next_time:  # Er det tid for ip-check?
+        if current_time >= self.next_time:  # time for ip-check?
             # update last and next time for ip-check 
             self.last_time = current_time 
             self.next_time = self.last_time.addSecs(self.ip_tid)
             # gets my ip
             print('sjekker-ip...')
             self.last_ip = get('https://api.ipify.org').content.decode('utf8')
-
-            #self.lbl_lastip_val.setText(self.last_ip)
-            #self.lbl_lastip_since_date_val.setText(self.last_ip_date)
-            
-
-            # Har vi ny IP?
-            if self.lbl_lastip_val.text() == self.last_ip:
+                   
+            if self.lbl_lastip_val.text() == self.last_ip:  # har vi ny IP?
                 print('Vi har samme ip')
             else:
                 print('Vi har fått ny ip')
