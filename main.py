@@ -81,6 +81,8 @@ class TableModel(QAbstractTableModel):
                     # print("hoihoi" + str(valuebol ))
                     return QIcon('tick.png')
                 return QIcon('cross.png')
+        # elif role == Qt.DisplayRole:
+        #     return None  # Do not return any value for the DisplayRole
 
     def rowCount(self, index):
         return len(self._data)
