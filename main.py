@@ -185,6 +185,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         a=0
         for item in StandardItem.list:
             a +=1
+            #
             #print (item.text() + str(a))
             
             if item.text() == str(item_ind.data()):
