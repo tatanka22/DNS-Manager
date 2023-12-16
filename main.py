@@ -338,17 +338,6 @@ def play_sound():
     #winsound.PlaySound(" SystemAsterisk", winsound.SND_ASYNC)
     pass
 
-def table_clicked():
-    print("table clicked")
-
-def table_double_clicked():
-    print("table double clicked")
-
-    item_ind = tableView.currentIndex()
-    print(item_ind.data())
-
-
-
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     win = MyWindow()
