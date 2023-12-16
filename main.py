@@ -3,9 +3,9 @@ import sys
 import os
 from dotenv import load_dotenv
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QApplication, QMainWindow, QCheckBox
+from PyQt5.QtWidgets import QApplication, QMainWindow, QCheckBox, QHeaderView
 from PyQt5.QtCore import QTimer, QTime, QDate, QRegExp, QModelIndex, Qt, QAbstractTableModel
-from PyQt5.QtGui import QRegExpValidator, QStandardItem, QColor, QFont, QStandardItemModel
+from PyQt5.QtGui import QRegExpValidator, QStandardItem, QColor, QFont, QStandardItemModel, QIcon
 from MyGui import Ui_MainWindow
 from domeneshop import Client
 import winsound
@@ -57,7 +57,6 @@ class aaaTableModel(QAbstractTableModel):
         column = QModelIndex.column()
         if int_role == Qt.DisplayRole:
             return str(self._data[self.dict_key][row][column])
-    
 
 class TableModel(QAbstractTableModel):
     def __init__(self, data):
@@ -71,6 +70,20 @@ class TableModel(QAbstractTableModel):
             column_key = self._headers[index.column()]
             return row_data[column_key]
 
+        if role == Qt.TextAlignmentRole and index.column() == 1:
+             return Qt.AlignRight | Qt.AlignVCenter
+
+        if role == Qt.ItemDataRole.DecorationRole and index.column() == 0:
+            value = self._data[index.row()]
+            valuebol = "True"
+            valuebol = value['Watch']
+            if isinstance(valuebol, bool):
+                if valuebol == True:
+                    print("hoihoi" + str(valuebol ))
+                    return QIcon('tick.png')
+                return QIcon('cross.png')
+            
+
     def rowCount(self, index):
         return len(self._data)
 
@@ -81,7 +94,6 @@ class TableModel(QAbstractTableModel):
     def headerData(self, section, orientation, role):
         if role == Qt.DisplayRole and orientation == Qt.Horizontal:
             return self._headers[section]
-
 
 class HGTableModel(QAbstractTableModel):
     def __init__(self, data):
@@ -104,7 +116,6 @@ class HGTableModel(QAbstractTableModel):
         # the length (only works if all rows are an equal length)
         return len(self._data[0])
 
-
 class MyWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         QtWidgets.QMainWindow.__init__(self)
@@ -112,6 +123,9 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
 
         self.api_client = Client(TOKEN, SECRET)
+
+        #   henter domener direkte
+        self.get_table_domains()
 
         # Timer for å oppdatere vinduet og vise tiden. millisec.
         timer1 = QTimer(self)  
@@ -145,6 +159,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.last_ip_time = "00:00:00"
         self.last_ip = "192.192.192.192"
 
+        self.tableView
         
     def set_button_clicked(self):
         self.ip_tid = int(self.lineEdit.text())
@@ -156,16 +171,17 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         # here we will put code for api
         pass
 
-    def gggg(self):
-        print("hoi")
+    def treeViewClicked(self):
+        print("tree-view clicked")
         
         item_ind = self.treeView.currentIndex()
         print(item_ind.data())
         
-    def gg(self):
-        print("hoihoi")
+    def treeViewDoubleClicked(self):
+        print("tree-view dobleclicked")
+
         item_ind = self.treeView.currentIndex()
-        
+                
         a=0
         for item in StandardItem.list:
             a +=1
@@ -177,36 +193,64 @@ class MyWindow(QMainWindow, Ui_MainWindow):
                 else: 
                     item.setForeground(StandardItem.colors[0])
 
-                #item.setForeground(QColor(0,0,255))
+    def table_clicked(self):
+        print("table clicked")
 
-        #self.min_record.setForeground(QColor(0,0,255))
-        
-        #print(item_ind.data())
-        #print(ab.data())
-        pass
+    def table_double_clicked(self):
+        print("table double clicked")
+
+        item_ind = self.tableView.currentIndex()
+        print(item_ind.data())
 
     def get_table_domains(self):
-        print('Clicked ')
-        
-        dataChunk2 = [  
-                {"Domene": "testdomene","TTL": "3600","IP": "32.23.43.343", "Status": "OK"}, 
-                {"Domene": "domenewes2", "TTL": "3600", "IP": "32.23.43.343", "Status": "OK"},
-                ]
+        #   henter domener og records hos registrar. data om disse ender opp i data_rect_list, en liste av dicts.
+        #   legger også til kolonne først i dicten med bool for om vi vil ip-checke det domenet eller ikke.
+        data_rec_list =[]
+        domains = self.api_client.get_domains()
+        for domain in domains:
+            dom_txt = format(domain["domain"])
+            print(dom_txt)
+            
+            for record in self.api_client.get_records(domain["id"]):
+                               
+                if record["type"] == 'A':#  and record["host"] != '@' :
+                    if record["host"] == "@":
+                        record["host"] = ""
+                    print(record["id"], record["host"], record["type"], record["data"])
 
-        tableModel = TableModel(dataChunk2)
+                    mydict = {"Watch": True, "Record": record["host"], "Domene": dom_txt,"Type": record["type"], "TTL": record["ttl"], "IP": record["data"], "ID": record["id"]}
+                    data_rec_list.append(mydict)
+        
+        # lager model og laster data.
+        tableModel = TableModel(data_rec_list)
+        # laster model inn i tableView som allerede er lagt til i UI-filen(qtdesigner)
         self.tableView.setModel(tableModel)
+        
+        #item = tableModel.index(4,0)
+        #print(item.data())
+
+        # setter kolonnebredder for tableView
+        header = self.tableView.horizontalHeader()       
+        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.Stretch)
+        header.setSectionResizeMode(2, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(5, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(6, QHeaderView.ResizeToContents)
+
+        self.tableView.clicked.connect(self.table_clicked)
+        self.tableView.doubleClicked.connect(self.table_double_clicked)
        
     def get_domains(self):
-       
         treeModel = QStandardItemModel()
-        #treeModel.setColumnCount(2)
-        
+              
         rootNode = treeModel.invisibleRootItem()
         self.treeView.setModel(treeModel)
         self.treeView.setHeaderHidden(True)
 
-        self.treeView.clicked.connect(self.gggg)
-        self.treeView.doubleClicked.connect(self.gg)
+        self.treeView.clicked.connect(self.treeViewClicked)
+        self.treeView.doubleClicked.connect(self.treeViewDoubleClicked)
     
         self.domains = self.api_client.get_domains()
        
@@ -221,22 +265,15 @@ class MyWindow(QMainWindow, Ui_MainWindow):
             print("id: {0}".format(domain["id"]))
             
             for record in self.api_client.get_records(domain["id"]):
-                print(record["id"], record["host"], record["type"], record["data"])
-                
-                if record["type"] == 'A' and record["host"] != '@' :
+                                
+                if record["type"] == 'A':# and record["host"] != '@' :
+                    if record["host"] == "@":
+                        record["host"] = ""
+                    print(record["id"], record["host"], record["type"], record["data"])
                     self.min_record = StandardItem( record['host'] + '.' + dom_txt,12 )
-                    test = []
-                    test.append(self.min_record)
-                    test2 = StandardItem('hallo')
-                    test3 = StandardItem('hadet')
-                    test.append(test2)
-                    test.append(test3)
-                    
+                                      
                     domene.insertRow(0,self.min_record)
-
-                    #domene.appendRow(self.min_record)
-                    
-                    
+                   
         
         myRec = {"host": "test56",
                 "ttl": 3600,
@@ -297,7 +334,17 @@ class MyWindow(QMainWindow, Ui_MainWindow):
 
 def play_sound():
     # Play a system sound
-    winsound.PlaySound("SystemAsterisk", winsound.SND_ASYNC)
+    #winsound.PlaySound(" SystemAsterisk", winsound.SND_ASYNC)
+    pass
+
+def table_clicked():
+    print("table clicked")
+
+def table_double_clicked():
+    print("table double clicked")
+
+    item_ind = tableView.currentIndex()
+    print(item_ind.data())
 
 
 

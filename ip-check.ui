@@ -20,8 +20,8 @@
    <widget class="QTabWidget" name="tabWidget">
     <property name="geometry">
      <rect>
-      <x>70</x>
-      <y>40</y>
+      <x>110</x>
+      <y>20</y>
       <width>551</width>
       <height>681</height>
      </rect>
@@ -452,18 +452,18 @@
      <widget class="QTableView" name="tableView">
       <property name="geometry">
        <rect>
-        <x>60</x>
-        <y>50</y>
-        <width>381</width>
-        <height>211</height>
+        <x>0</x>
+        <y>30</y>
+        <width>511</width>
+        <height>621</height>
        </rect>
       </property>
      </widget>
      <widget class="QPushButton" name="btn_table">
       <property name="geometry">
        <rect>
-        <x>460</x>
-        <y>40</y>
+        <x>440</x>
+        <y>0</y>
         <width>75</width>
         <height>23</height>
        </rect>
