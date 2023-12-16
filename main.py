@@ -8,6 +8,7 @@ from PyQt5.QtCore import QTimer, QTime, QDate, QRegExp, QModelIndex, Qt, QAbstra
 from PyQt5.QtGui import QRegExpValidator, QStandardItem, QColor, QFont, QStandardItemModel
 from MyGui import Ui_MainWindow
 from domeneshop import Client
+import winsound
 
 load_dotenv()
 # api-credentials for domeneshop api
@@ -57,8 +58,32 @@ class aaaTableModel(QAbstractTableModel):
         if int_role == Qt.DisplayRole:
             return str(self._data[self.dict_key][row][column])
     
-   
+
 class TableModel(QAbstractTableModel):
+    def __init__(self, data):
+        super(TableModel, self).__init__()
+        self._data = data
+        self._headers = list(data[0].keys()) if data else []
+
+    def data(self, index, role):
+        if role == Qt.DisplayRole:
+            row_data = self._data[index.row()]
+            column_key = self._headers[index.column()]
+            return row_data[column_key]
+
+    def rowCount(self, index):
+        return len(self._data)
+
+    def columnCount(self, index):
+        return len(self._headers)
+        pass
+
+    def headerData(self, section, orientation, role):
+        if role == Qt.DisplayRole and orientation == Qt.Horizontal:
+            return self._headers[section]
+
+
+class HGTableModel(QAbstractTableModel):
     def __init__(self, data):
         super(TableModel, self).__init__()
         self._data = data
@@ -78,6 +103,7 @@ class TableModel(QAbstractTableModel):
         # The following takes the first sub-list, and returns
         # the length (only works if all rows are an equal length)
         return len(self._data[0])
+
 
 class MyWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
@@ -162,20 +188,12 @@ class MyWindow(QMainWindow, Ui_MainWindow):
     def get_table_domains(self):
         print('Clicked ')
         
-        dataChunk = [
-          ["test.fritun.no", 9, 2],
-          ["harald.fritun.no", 0, 0],
-          ["hydro.fritun.no", 5, 0],
-          ["test.etase.no", 3, 2],
-          ["sjokolade.etase.no", 8, 9],
-        ]
+        dataChunk2 = [  
+                {"Domene": "testdomene","TTL": "3600","IP": "32.23.43.343", "Status": "OK"}, 
+                {"Domene": "domenewes2", "TTL": "3600", "IP": "32.23.43.343", "Status": "OK"},
+                ]
 
-        dataChunk2 = [  {"Domene": "testdomene",
-                         "TTL": "3600", 
-                         "IP": "32.23.43.343" },
-                        {"Domene": "domenewes2", "TTL": "3600", "IP": "32.23.43.343" }]
-
-        tableModel = TableModel(dataChunk)
+        tableModel = TableModel(dataChunk2)
         self.tableView.setModel(tableModel)
        
     def get_domains(self):
@@ -258,6 +276,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
 
         if current_time >= self.next_time:  # time for ip-check?
             # update last and next time for ip-check 
+            play_sound()
             self.last_time = current_time 
             self.next_time = self.last_time.addSecs(self.ip_tid)
             # gets my ip
@@ -275,6 +294,11 @@ class MyWindow(QMainWindow, Ui_MainWindow):
                 self.lbl_lastip_since_time_val.setText(self.last_ip_time)
                 self.last_ip = self.lbl_lastip_val.text()
                 self.ny_ip_actions()
+
+def play_sound():
+    # Play a system sound
+    winsound.PlaySound("SystemAsterisk", winsound.SND_ASYNC)
+
 
 
 if __name__ == '__main__':
