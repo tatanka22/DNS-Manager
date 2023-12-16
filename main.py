@@ -79,7 +79,7 @@ class TableModel(QAbstractTableModel):
             valuebol = value['Watch']
             if isinstance(valuebol, bool):
                 if valuebol == True:
-                    print("hoihoi" + str(valuebol ))
+                    # print("hoihoi" + str(valuebol ))
                     return QIcon('tick.png')
                 return QIcon('cross.png')
             
@@ -94,27 +94,6 @@ class TableModel(QAbstractTableModel):
     def headerData(self, section, orientation, role):
         if role == Qt.DisplayRole and orientation == Qt.Horizontal:
             return self._headers[section]
-
-class HGTableModel(QAbstractTableModel):
-    def __init__(self, data):
-        super(TableModel, self).__init__()
-        self._data = data
-
-    def data(self, index, role):
-        if role == Qt.DisplayRole:
-            # See below for the nested-list data structure.
-            # .row() indexes into the outer list,
-            # .column() indexes into the sub-list
-            return self._data[index.row()][index.column()]
-
-    def rowCount(self, index):
-        # The length of the outer list.
-        return len(self._data)
-
-    def columnCount(self, index):
-        # The following takes the first sub-list, and returns
-        # the length (only works if all rows are an equal length)
-        return len(self._data[0])
 
 class MyWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
@@ -201,12 +180,17 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         print("table double clicked")
 
         item_ind = self.tableView.currentIndex()
+        row = item_ind.row()  # Get the row of the clicked item
+
+        # Toggle the 'Watch' value in the corresponding dictionary
+        self.data_rec_list[row]['Watch'] = not self.data_rec_list[row]['Watch']
+
         print(item_ind.data())
 
     def get_table_domains(self):
         #   henter domener og records hos registrar. data om disse ender opp i data_rect_list, en liste av dicts.
         #   legger også til kolonne først i dicten med bool for om vi vil ip-checke det domenet eller ikke.
-        data_rec_list =[]
+        self.data_rec_list =[]
         domains = self.api_client.get_domains()
         for domain in domains:
             dom_txt = format(domain["domain"])
@@ -217,13 +201,14 @@ class MyWindow(QMainWindow, Ui_MainWindow):
                 if record["type"] == 'A':#  and record["host"] != '@' :
                     if record["host"] == "@":
                         record["host"] = ""
+
                     print(record["id"], record["host"], record["type"], record["data"])
 
                     mydict = {"Watch": True, "Record": record["host"], "Domene": dom_txt,"Type": record["type"], "TTL": record["ttl"], "IP": record["data"], "ID": record["id"]}
-                    data_rec_list.append(mydict)
+                    self.data_rec_list.append(mydict)
         
         # lager model og laster data.
-        tableModel = TableModel(data_rec_list)
+        tableModel = TableModel(self.data_rec_list)
         # laster model inn i tableView som allerede er lagt til i UI-filen(qtdesigner)
         self.tableView.setModel(tableModel)
         
@@ -337,15 +322,6 @@ def play_sound():
     # Play a system sound
     #winsound.PlaySound(" SystemAsterisk", winsound.SND_ASYNC)
     pass
-
-def table_clicked():
-    print("table clicked")
-
-def table_double_clicked():
-    print("table double clicked")
-
-    item_ind = tableView.currentIndex()
-    print(item_ind.data())
 
 
 
