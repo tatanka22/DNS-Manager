@@ -65,7 +65,7 @@ class TableModel(QAbstractTableModel):
         self._headers = list(data[0].keys()) if data else []
 
     def data(self, index, role):
-        if role == Qt.DisplayRole:
+        if role == Qt.DisplayRole and index.column() != 0:
             row_data = self._data[index.row()]
             column_key = self._headers[index.column()]
             return row_data[column_key]
@@ -75,14 +75,12 @@ class TableModel(QAbstractTableModel):
 
         if role == Qt.ItemDataRole.DecorationRole and index.column() == 0:
             value = self._data[index.row()]
-            valuebol = "True"
             valuebol = value['Watch']
             if isinstance(valuebol, bool):
                 if valuebol == True:
                     # print("hoihoi" + str(valuebol ))
                     return QIcon('tick.png')
                 return QIcon('cross.png')
-            
 
     def rowCount(self, index):
         return len(self._data)
@@ -186,6 +184,11 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.data_rec_list[row]['Watch'] = not self.data_rec_list[row]['Watch']
 
         print(item_ind.data())
+
+        # Update the view
+        self.tableView.model().beginResetModel()
+        self.tableView.model().endResetModel()
+        self.tableView.update()
 
     def get_table_domains(self):
         #   henter domener og records hos registrar. data om disse ender opp i data_rect_list, en liste av dicts.
