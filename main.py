@@ -57,8 +57,32 @@ class aaaTableModel(QAbstractTableModel):
         if int_role == Qt.DisplayRole:
             return str(self._data[self.dict_key][row][column])
     
-   
+
 class TableModel(QAbstractTableModel):
+    def __init__(self, data):
+        super(TableModel, self).__init__()
+        self._data = data
+        self._headers = list(data[0].keys()) if data else []
+
+    def data(self, index, role):
+        if role == Qt.DisplayRole:
+            row_data = self._data[index.row()]
+            column_key = self._headers[index.column()]
+            return row_data[column_key]
+
+    def rowCount(self, index):
+        return len(self._data)
+
+    def columnCount(self, index):
+        return len(self._headers)
+        pass
+
+    def headerData(self, section, orientation, role):
+        if role == Qt.DisplayRole and orientation == Qt.Horizontal:
+            return self._headers[section]
+
+
+class HGTableModel(QAbstractTableModel):
     def __init__(self, data):
         super(TableModel, self).__init__()
         self._data = data
@@ -78,6 +102,7 @@ class TableModel(QAbstractTableModel):
         # The following takes the first sub-list, and returns
         # the length (only works if all rows are an equal length)
         return len(self._data[0])
+
 
 class MyWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
@@ -170,12 +195,12 @@ class MyWindow(QMainWindow, Ui_MainWindow):
           ["sjokolade.etase.no", 8, 9],
         ]
 
-        dataChunk2 = [  {"Domene": "testdomene",
-                         "TTL": "3600", 
-                         "IP": "32.23.43.343" },
-                        {"Domene": "domenewes2", "TTL": "3600", "IP": "32.23.43.343" }]
+        dataChunk2 = [  
+                {"Domene": "testdomene","TTL": "3600","IP": "32.23.43.343", "Status": "OK"}, 
+                {"Domene": "domenewes2", "TTL": "3600", "IP": "32.23.43.343", "Status": "OK"},
+                ]
 
-        tableModel = TableModel(dataChunk)
+        tableModel = TableModel(dataChunk2)
         self.tableView.setModel(tableModel)
        
     def get_domains(self):
