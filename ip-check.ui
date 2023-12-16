@@ -10,6 +10,9 @@
     <height>749</height>
    </rect>
   </property>
+  <property name="focusPolicy">
+   <enum>Qt::ClickFocus</enum>
+  </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
@@ -24,7 +27,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>1</number>
+     <number>2</number>
     </property>
     <widget class="QWidget" name="tab_main">
      <attribute name="title">
@@ -67,7 +70,7 @@
        <string/>
       </property>
       <property name="pixmap">
-       <pixmap>../../../../Pictures/check.PNG</pixmap>
+       <pixmap>check.PNG</pixmap>
       </property>
       <property name="scaledContents">
        <bool>true</bool>
@@ -442,6 +445,34 @@
       </property>
      </widget>
     </widget>
+    <widget class="QWidget" name="tab">
+     <attribute name="title">
+      <string>Table view</string>
+     </attribute>
+     <widget class="QTableView" name="tableView">
+      <property name="geometry">
+       <rect>
+        <x>60</x>
+        <y>50</y>
+        <width>381</width>
+        <height>211</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="btn_table">
+      <property name="geometry">
+       <rect>
+        <x>460</x>
+        <y>40</y>
+        <width>75</width>
+        <height>23</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Load Domains</string>
+      </property>
+     </widget>
+    </widget>
     <widget class="QWidget" name="tab_account">
      <attribute name="title">
       <string>Account</string>
@@ -519,19 +550,6 @@
       </property>
      </widget>
     </widget>
-   </widget>
-   <widget class="QCheckBox" name="checkBox_2">
-    <property name="geometry">
-     <rect>
-      <x>740</x>
-      <y>440</y>
-      <width>70</width>
-      <height>17</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>CheckBox</string>
-    </property>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menubar">
