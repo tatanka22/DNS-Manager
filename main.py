@@ -8,6 +8,7 @@ from PyQt5.QtCore import QTimer, QTime, QDate, QRegExp, QModelIndex, Qt, QAbstra
 from PyQt5.QtGui import QRegExpValidator, QStandardItem, QColor, QFont, QStandardItemModel
 from MyGui import Ui_MainWindow
 from domeneshop import Client
+import winsound
 
 load_dotenv()
 # api-credentials for domeneshop api
@@ -187,14 +188,6 @@ class MyWindow(QMainWindow, Ui_MainWindow):
     def get_table_domains(self):
         print('Clicked ')
         
-        dataChunk = [
-          ["test.fritun.no", 9, 2],
-          ["harald.fritun.no", 0, 0],
-          ["hydro.fritun.no", 5, 0],
-          ["test.etase.no", 3, 2],
-          ["sjokolade.etase.no", 8, 9],
-        ]
-
         dataChunk2 = [  
                 {"Domene": "testdomene","TTL": "3600","IP": "32.23.43.343", "Status": "OK"}, 
                 {"Domene": "domenewes2", "TTL": "3600", "IP": "32.23.43.343", "Status": "OK"},
@@ -283,6 +276,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
 
         if current_time >= self.next_time:  # time for ip-check?
             # update last and next time for ip-check 
+            play_sound()
             self.last_time = current_time 
             self.next_time = self.last_time.addSecs(self.ip_tid)
             # gets my ip
@@ -300,6 +294,11 @@ class MyWindow(QMainWindow, Ui_MainWindow):
                 self.lbl_lastip_since_time_val.setText(self.last_ip_time)
                 self.last_ip = self.lbl_lastip_val.text()
                 self.ny_ip_actions()
+
+def play_sound():
+    # Play a system sound
+    winsound.PlaySound("SystemAsterisk", winsound.SND_ASYNC)
+
 
 
 if __name__ == '__main__':
