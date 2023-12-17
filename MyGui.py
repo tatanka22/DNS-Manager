@@ -36,7 +36,7 @@ class Ui_MainWindow(object):
         font.setFamily("Roboto")
         self.label.setFont(font)
         self.label.setText("")
-        self.label.setPixmap(QtGui.QPixmap("check.PNG"))
+        self.label.setPixmap(QtGui.QPixmap("Resources/check.PNG"))
         self.label.setScaledContents(True)
         self.label.setObjectName("label")
         self.lbl_upsince = QtWidgets.QLabel(self.tab_main)

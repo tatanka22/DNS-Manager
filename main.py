@@ -54,11 +54,11 @@ class TableModel(QAbstractTableModel):
 
         if role == Qt.ItemDataRole.DecorationRole and index.column() == 0:
             value = self._data[index.row()]
-            valuebol = value['Watch']
-            if isinstance(valuebol, bool):
-                if valuebol == True:
-                    return QIcon('tick.png')
-                return QIcon('cross.png')
+            value_bool = value['Watch']
+            if isinstance(value_bool, bool):
+                if value_bool == True:
+                    return QIcon('Resources\tick.png')
+                return QIcon('Resources\cross.png')
     
     def rowCount(self, index):
         return len(self._data)
@@ -93,9 +93,10 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.ip_tid = 120
         self.lineEdit.setText("120")
 
-        # buttons for domains
+        # buttons for domains og menyer
         self.btn_domains.clicked.connect(self.get_domains)
         self.btn_table.clicked.connect(self.get_table_domains)
+        self.actionSound_alerts.triggered.connect(self.actionSound_alerts_changed)
 
         # Validator
         validator = QRegExpValidator(QRegExp(r'[0-9]+'))
@@ -154,6 +155,11 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         # here we will put code for to do with api
         pass
 
+    def actionSound_alerts_changed(self):
+        self.sound_bool = self.actionSound_alerts.isChecked()
+        print(self.sound_bool)
+        print('nå er vi her igjen')
+    
     def treeViewClicked(self):
         print("tree-view clicked")
         
@@ -313,11 +319,11 @@ class MyWindow(QMainWindow, Ui_MainWindow):
                    
             if self.lbl_lastip_val.text() == self.last_ip:  # har vi ny IP?
                 print('Vi har samme ip')
-                play_sound('systemAsterisk')
+                play_sound('Resources\sound_ipcheck.wav')
+                #play_sound('sound_new_ip.wav')
             else:
                 print('Vi har fått ny ip')
-                #play_sound('systemHand')
-                play_sound('systemNotification')
+                play_sound('Resources\sound_new_ip.wav')
                 self.lbl_lastip_val.setText(self.last_ip)
                 self.last_ip_date = QDate.currentDate().toString('dd.MM.yyyy')   # lastIpate er for dagen vi fikk siste IP
                # self.lbl_lastip_since_date.setText(self.last_ip_date)
@@ -331,7 +337,7 @@ def play_sound(sound):
     print("her for å spille lyd")
     if MyWindow().sound_bool:
         print("spiller lyd")
-        winsound.PlaySound('windows Notify', winsound.SND_ASYNC)
+        winsound.PlaySound(sound, winsound.SND_FILENAME)
         
 
 if __name__ == '__main__':
