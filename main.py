@@ -8,6 +8,7 @@ from PyQt5.QtCore import QTimer, QTime, QDate, QRegExp, QModelIndex, Qt, QAbstra
 from PyQt5.QtGui import QRegExpValidator, QStandardItem, QColor, QFont, QStandardItemModel, QIcon
 from MyGui import Ui_MainWindow
 from domeneshop import Client
+from configparser import ConfigParser
 import winsound
 
 load_dotenv()
@@ -34,30 +35,6 @@ class StandardItem(QStandardItem):
    
         StandardItem.list.append(self)
         
-class aaaTableModel(QAbstractTableModel):
-    def __init__(self, data, parent=None):
-        super(TableModel, self).__init__(parent)
-        self._data = data
-        # default key
-        self.dict_key = 'key0'
-
-    def set_key(self, key):
-        self.beginResetModel()
-        self.dict_key = key
-        self.endResetModel()
-
-    def rowCount(self, QModelIndex_parent=None, *args, **kwargs):
-        return len(self._data[self.dict_key])
-
-    def columnCount(self, QModelIndex_parent=None, *args, **kwargs):
-        return len(self._data[self.dict_key][0])
-
-    def data(self, QModelIndex, int_role=None):
-        row = QModelIndex.row()
-        column = QModelIndex.column()
-        if int_role == Qt.DisplayRole:
-            return str(self._data[self.dict_key][row][column])
-
 class TableModel(QAbstractTableModel):
     def __init__(self, data):
         super(TableModel, self).__init__()
@@ -65,25 +42,24 @@ class TableModel(QAbstractTableModel):
         self._headers = list(data[0].keys()) if data else []
 
     def data(self, index, role):
-        if role == Qt.DisplayRole:
+        if role == Qt.DisplayRole and index.column() != 0:
             row_data = self._data[index.row()]
             column_key = self._headers[index.column()]
             return row_data[column_key]
+        if role == Qt.DisplayRole and index.column() == 0:
+            return None  # Do not return any value for the DisplayRole if columnn == 0. (because we only want icon.)
 
         if role == Qt.TextAlignmentRole and index.column() == 1:
              return Qt.AlignRight | Qt.AlignVCenter
 
         if role == Qt.ItemDataRole.DecorationRole and index.column() == 0:
             value = self._data[index.row()]
-            valuebol = "True"
             valuebol = value['Watch']
             if isinstance(valuebol, bool):
                 if valuebol == True:
-                    # print("hoihoi" + str(valuebol ))
                     return QIcon('tick.png')
                 return QIcon('cross.png')
-            
-
+    
     def rowCount(self, index):
         return len(self._data)
 
@@ -96,6 +72,7 @@ class TableModel(QAbstractTableModel):
             return self._headers[section]
 
 class MyWindow(QMainWindow, Ui_MainWindow):
+
     def __init__(self):
         QtWidgets.QMainWindow.__init__(self)
         Ui_MainWindow.__init__(self)
@@ -138,8 +115,35 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.last_ip_time = "00:00:00"
         self.last_ip = "192.192.192.192"
 
-        self.tableView
+        self.lbl_lastipsince = "01:01:01"
+        self.lbl_lastip_since_date = "12.12.12"
+
+        # bool for soundalerts on or off
+        self.sound_bool = True
+
+        # parser for config.ini 
+        self.cfg_parser = ConfigParser() 
         
+        self.make_config()  # lager inifil hvis den ikke finnes
+
+        # reads config.ini
+        self.cfg_parser.read('config.ini')
+        self.ip_tid = int(self.cfg_parser['DEFAULT']['ip_tid'])
+        self.sound_bool = (self.cfg_parser['DEFAULT']['sound_alerts'] == 'True')
+        self.actionSound_alerts.setChecked(self.sound_bool)
+        self.lineEdit.setText(str(self.ip_tid))
+        
+
+    def make_config(self):  
+        # creates config.ini if it does not exist
+        if not os.path.exists('config.ini'):
+            self.cfg_parser['DEFAULT'] = {'ip_tid': '120', 'sound_alerts': 'True'}
+            self.cfg_parser['DOMAINS'] = {'domain1': 'example.com', 'domain2': 'example2.com'}
+            self.cfg_parser['RECORDS'] = {'record1': 'example.com', 'record2': 'example2.com'}
+            self.cfg_parser['IP'] = {'ip': '12.123.12.123'}
+            with open('config.ini', 'w') as configfile:
+                self.cfg_parser.write(configfile)      
+
     def set_button_clicked(self):
         self.ip_tid = int(self.lineEdit.text())
         self.next_time = QTime.currentTime().addSecs(self.ip_tid)
@@ -147,7 +151,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         print(self.ip_tid)
 
     def ny_ip_actions(self):
-        # here we will put code for api
+        # here we will put code for to do with api
         pass
 
     def treeViewClicked(self):
@@ -178,18 +182,19 @@ class MyWindow(QMainWindow, Ui_MainWindow):
 
     def table_double_clicked(self):
         print("table double clicked")
-
-        item_ind = self.tableView.currentIndex()
-        row = item_ind.row()  # Get the row of the clicked item
-
-        # Toggle the 'Watch' value in the corresponding dictionary
+        
+        # toggle the 'Watch' value in the corresponding dictionary
+        row = self.tableView.currentIndex().row()
         self.data_rec_list[row]['Watch'] = not self.data_rec_list[row]['Watch']
-
-        print(item_ind.data())
+        
+        # update the view after changes made to data in model
+        self.tableView.model().beginResetModel()
+        self.tableView.model().endResetModel()
+        self.tableView.update()
 
     def get_table_domains(self):
         #   henter domener og records hos registrar. data om disse ender opp i data_rect_list, en liste av dicts.
-        #   legger også til kolonne først i dicten med bool for om vi vil ip-checke det domenet eller ikke.
+        #   legger også til kolonne først i dicten med boolean verdi for om vi vil ip-checke det domenet eller ikke.
         self.data_rec_list =[]
         domains = self.api_client.get_domains()
         for domain in domains:
@@ -299,7 +304,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
 
         if current_time >= self.next_time:  # time for ip-check?
             # update last and next time for ip-check 
-            play_sound()
+            
             self.last_time = current_time 
             self.next_time = self.last_time.addSecs(self.ip_tid)
             # gets my ip
@@ -308,20 +313,26 @@ class MyWindow(QMainWindow, Ui_MainWindow):
                    
             if self.lbl_lastip_val.text() == self.last_ip:  # har vi ny IP?
                 print('Vi har samme ip')
+                play_sound('systemAsterisk')
             else:
                 print('Vi har fått ny ip')
+                #play_sound('systemHand')
+                play_sound('systemNotification')
                 self.lbl_lastip_val.setText(self.last_ip)
                 self.last_ip_date = QDate.currentDate().toString('dd.MM.yyyy')   # lastIpate er for dagen vi fikk siste IP
-                self.lbl_lastip_since_date_val.setText(self.last_ip_date)
+               # self.lbl_lastip_since_date.setText(self.last_ip_date)
                 self.lastip_time = current_time.toString('hh:mm:ss')             # lastIpTime er for når vi fikk siste IP
-                self.lbl_lastip_since_time_val.setText(self.last_ip_time)
-                self.last_ip = self.lbl_lastip_val.text()
+               # self.lbl_lastip_since.setText(self.last_ip_time)
+               # self.last_ip = self.lbl_lastip.text()
                 self.ny_ip_actions()
 
-def play_sound():
-    # Play a system sound
-    #winsound.PlaySound(" SystemAsterisk", winsound.SND_ASYNC)
-    pass
+def play_sound(sound):
+        # Play a system sound
+    print("her for å spille lyd")
+    if MyWindow().sound_bool:
+        print("spiller lyd")
+        winsound.PlaySound('windows Notify', winsound.SND_ASYNC)
+        
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

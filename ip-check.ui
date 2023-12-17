@@ -27,7 +27,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>2</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="tab_main">
      <attribute name="title">
@@ -94,7 +94,7 @@
        <string>Up since:</string>
       </property>
      </widget>
-     <widget class="QLabel" name="lbl_lastip_since_date_val">
+     <widget class="QLabel" name="lbl_lastip_since_date">
       <property name="geometry">
        <rect>
         <x>470</x>
@@ -584,6 +584,7 @@
     <property name="title">
      <string>Settings</string>
     </property>
+    <addaction name="actionSound_alerts"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -637,6 +638,17 @@
   <action name="actionQuit">
    <property name="text">
     <string>Quit</string>
+   </property>
+  </action>
+  <action name="actionSound_alerts">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Sound alerts</string>
    </property>
   </action>
  </widget>
