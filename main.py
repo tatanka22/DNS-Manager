@@ -9,6 +9,7 @@ from PyQt5.QtGui import QRegExpValidator, QStandardItem, QColor, QFont, QStandar
 from MyGui import Ui_MainWindow
 from domeneshop import Client
 from configparser import ConfigParser
+import logging
 import winsound
 
 load_dotenv()
@@ -54,11 +55,15 @@ class TableModel(QAbstractTableModel):
 
         if role == Qt.ItemDataRole.DecorationRole and index.column() == 0:
             value = self._data[index.row()]
+            value_bool = True
             value_bool = value['Watch']
             if isinstance(value_bool, bool):
+                print(value_bool == True)
                 if value_bool == True:
-                    return QIcon('Resources\tick.png')
-                return QIcon('Resources\cross.png')
+                    return QIcon('Resources/tick.png')
+                return QIcon('Resources/cross.png')
+            return None
+            
     
     def rowCount(self, index):
         return len(self._data)
@@ -72,13 +77,33 @@ class TableModel(QAbstractTableModel):
             return self._headers[section]
 
 class MyWindow(QMainWindow, Ui_MainWindow):
-
     def __init__(self):
         QtWidgets.QMainWindow.__init__(self)
         Ui_MainWindow.__init__(self)
         self.setupUi(self)
 
+        # api client for domeneshop
         self.api_client = Client(TOKEN, SECRET)
+
+        # logger
+        logging.basicConfig(filename='example.log', level=logging.INFO)
+        logging.debug('This message should go to the log file')
+        logging.info(' ' + QDate.currentDate().toString('dd.MM.yyyy') + ' ' + QTime.currentTime().toString('hh:mm:ss') + 
+                          ' So we\'re rolling with logging :-)' )
+
+        # parser for config.ini 
+        self.cfg_parser = ConfigParser() 
+        
+        self.make_config()  # lager inifil hvis den ikke finnes
+
+        # reads config.ini
+        self.cfg_parser.read('config.ini')
+        self.ip_tid = int(self.cfg_parser['DEFAULT']['ip_tid'])
+        sound_bool = (self.cfg_parser['DEFAULT']['sound_alerts'] == 'True')
+        self.actionSound_alerts.setChecked(sound_bool)
+        self.lineEdit.setText(str(self.ip_tid))
+        self.logging_on = (self.cfg_parser['DEFAULT']['logging'] == 'True')
+        self.actionLogging_on.setChecked(self.logging_on)
 
         #   henter domener direkte
         self.get_table_domains()
@@ -86,17 +111,22 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         # Timer for å oppdatere vinduet og vise tiden. millisec.
         timer1 = QTimer(self)  
         timer1.timeout.connect(self.visTid)
-        timer1.start(200)
+        timer1.start(500)
 
         # Knapp for å sette tiden i sekunder mellom hver ip-sjekk
         self.btn_set_interval.clicked.connect(self.set_button_clicked)
         self.ip_tid = 120
         self.lineEdit.setText("120")
 
-        # buttons for domains og menyer
+        # buttons for domains og table  click
         self.btn_domains.clicked.connect(self.get_domains)
         self.btn_table.clicked.connect(self.get_table_domains)
-        self.actionSound_alerts.triggered.connect(self.actionSound_alerts_changed)
+       
+        self.tableView.clicked.connect(self.table_clicked)
+        self.tableView.doubleClicked.connect(self.table_double_clicked)
+
+        self.actionSound_alerts.changed.connect(self.actionSound_alerts_changed)
+        self.actionLogging_on.changed.connect(self.actionLogging_on_changed)        
 
         # Validator
         validator = QRegExpValidator(QRegExp(r'[0-9]+'))
@@ -118,27 +148,14 @@ class MyWindow(QMainWindow, Ui_MainWindow):
 
         self.lbl_lastipsince = "01:01:01"
         self.lbl_lastip_since_date = "12.12.12"
-
-        # bool for soundalerts on or off
-        self.sound_bool = True
-
-        # parser for config.ini 
-        self.cfg_parser = ConfigParser() 
         
-        self.make_config()  # lager inifil hvis den ikke finnes
 
-        # reads config.ini
-        self.cfg_parser.read('config.ini')
-        self.ip_tid = int(self.cfg_parser['DEFAULT']['ip_tid'])
-        self.sound_bool = (self.cfg_parser['DEFAULT']['sound_alerts'] == 'True')
-        self.actionSound_alerts.setChecked(self.sound_bool)
-        self.lineEdit.setText(str(self.ip_tid))
         
 
     def make_config(self):  
         # creates config.ini if it does not exist
         if not os.path.exists('config.ini'):
-            self.cfg_parser['DEFAULT'] = {'ip_tid': '120', 'sound_alerts': 'True'}
+            self.cfg_parser['DEFAULT'] = {'ip_tid': '120', 'sound_alerts': 'True', 'logging': 'True'}
             self.cfg_parser['DOMAINS'] = {'domain1': 'example.com', 'domain2': 'example2.com'}
             self.cfg_parser['RECORDS'] = {'record1': 'example.com', 'record2': 'example2.com'}
             self.cfg_parser['IP'] = {'ip': '12.123.12.123'}
@@ -150,31 +167,61 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.next_time = QTime.currentTime().addSecs(self.ip_tid)
         print('Satt ny ip-tid')
         print(self.ip_tid)
+        logging.info(' ' +QDate.currentDate().toString('dd.MM.yyyy') + ' ' + QTime.currentTime().toString('hh:mm:ss') +
+                     ' Satt nytt tidsinterval for ip-sjekk : ' + str(self.ip_tid) + ' s. ' )
+                         
 
+    def actionSound_alerts_changed(self):
+        print("sound_alerts clicked")
+        self.cfg_parser['DEFAULT']['sound_alerts'] = str(self.actionSound_alerts.isChecked())
+        with open('config.ini', 'w') as configfile:
+            self.cfg_parser.write(configfile)
+        if self.actionSound_alerts.isChecked() == True:
+            play_sound('Resources\sound_ipcheck.wav')
+            logging.info(' ' + QDate.currentDate().toString('dd.MM.yyyy') + ' ' + QTime.currentTime().toString('hh:mm:ss') +
+                     ' Sound_alerts turned on' )
+        if self.actionSound_alerts.isChecked() == False:
+            play_sound('Resources\sound_ipcheck.wav') ### todo bytt ut med lyd for sound_alerts off
+            logging.info(' ' + QDate.currentDate().toString('dd.MM.yyyy') + ' ' + QTime.currentTime().toString('hh:mm:ss') +
+                     ' Sound_alerts turned off' )             
+
+    def actionLogging_on_changed(self):
+        # skriver til logg at vi har slått av/på logging setter variabel logging_on til True/False
+        # vi bruker den andre steder vi logger for å sjekke om vi skal logge eller ikke
+        
+        if self.actionLogging_on.isChecked() == True:
+            logging.info(' ' +QDate.currentDate().toString('dd.MM.yyyy') + ' ' + QTime.currentTime().toString('hh:mm:ss')+
+                          ' Logging turned on. Hello world!' )
+            self.logging_on = True
+            #print("logging slått på")
+        else: 
+            logging.info(' '+ QDate.currentDate().toString('dd.MM.yyyy') + ' ' + QTime.currentTime().toString('hh:mm:ss')+
+                          ' Logging turned off. See you...'  )
+            self.logging_on = False
+            print("logging slått av")
+
+        # skriver i ini-fil
+        self.cfg_parser['DEFAULT']['logging'] = str(self.actionLogging_on.isChecked())
+        with open('config.ini', 'w') as configfile:
+            self.cfg_parser.write(configfile)
+        
+        
     def ny_ip_actions(self):
         # here we will put code for to do with api
         pass
 
-    def actionSound_alerts_changed(self):
-        self.sound_bool = self.actionSound_alerts.isChecked()
-        print(self.sound_bool)
-        print('nå er vi her igjen')
-    
     def treeViewClicked(self):
-        print("tree-view clicked")
-        
+        # print("tree-view clicked")
         item_ind = self.treeView.currentIndex()
         print(item_ind.data())
         
     def treeViewDoubleClicked(self):
-        print("tree-view dobleclicked")
-
+        #print("tree-view dobleclicked")
         item_ind = self.treeView.currentIndex()
                 
-        a=0
+        #a=0
         for item in StandardItem.list:
-            a +=1
-            #
+            #a +=1
             #print (item.text() + str(a))
             
             if item.text() == str(item_ind.data()):
@@ -203,6 +250,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         #   legger også til kolonne først i dicten med boolean verdi for om vi vil ip-checke det domenet eller ikke.
         self.data_rec_list =[]
         domains = self.api_client.get_domains()
+        
         for domain in domains:
             dom_txt = format(domain["domain"])
             print(dom_txt)
@@ -223,9 +271,6 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         # laster model inn i tableView som allerede er lagt til i UI-filen(qtdesigner)
         self.tableView.setModel(tableModel)
         
-        #item = tableModel.index(4,0)
-        #print(item.data())
-
         # setter kolonnebredder for tableView
         header = self.tableView.horizontalHeader()       
         header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
@@ -236,9 +281,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         header.setSectionResizeMode(5, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(6, QHeaderView.ResizeToContents)
 
-        self.tableView.clicked.connect(self.table_clicked)
-        self.tableView.doubleClicked.connect(self.table_double_clicked)
-       
+           
     def get_domains(self):
         treeModel = QStandardItemModel()
               
@@ -266,11 +309,14 @@ class MyWindow(QMainWindow, Ui_MainWindow):
                 if record["type"] == 'A':# and record["host"] != '@' :
                     if record["host"] == "@":
                         record["host"] = ""
-                    print(record["id"], record["host"], record["type"], record["data"])
+                    #print(record["id"], record["host"], record["type"], record["data"])
                     self.min_record = StandardItem( record['host'] + '.' + dom_txt,12 )
                                       
                     domene.insertRow(0,self.min_record)
-                   
+        
+        if self.logging_on:
+            logging.info(' ' + QDate.currentDate().toString('dd.MM.yyyy') + ' ' + QTime.currentTime().toString('hh:mm:ss')+
+                         'get_domains: ' + str(self.domains)   ) 
         
         myRec = {"host": "test56",
                 "ttl": 3600,
@@ -310,33 +356,41 @@ class MyWindow(QMainWindow, Ui_MainWindow):
 
         if current_time >= self.next_time:  # time for ip-check?
             # update last and next time for ip-check 
-            
             self.last_time = current_time 
             self.next_time = self.last_time.addSecs(self.ip_tid)
             # gets my ip
             print('sjekker-ip...')
             self.last_ip = get('https://api.ipify.org').content.decode('utf8')
                    
-            if self.lbl_lastip_val.text() == self.last_ip:  # har vi ny IP?
+            if self.lbl_lastip_val.text() == self.last_ip:  # har vi samme IP?
                 print('Vi har samme ip')
+                logging.info(' ' + current_date.toString('dd.MM.yyyy') +' ' + current_time.toString('hh:mm:ss') +
+                             ' Vi har samme ip: ' + self.last_ip )
                 play_sound('Resources\sound_ipcheck.wav')
-                #play_sound('sound_new_ip.wav')
             else:
                 print('Vi har fått ny ip')
+                logging.info(' ' + current_date.toString('dd.MM.yyyy') +' ' + current_time.toString('hh:mm:ss') +
+                             ' Vi fikk ny ip: ' + self.last_ip )
                 play_sound('Resources\sound_new_ip.wav')
+                # ny ip til ini-fil
+                self.cfg_parser['IP']['ip'] = self.last_ip
+                with open('config.ini', 'w') as configfile:
+                    self.cfg_parser.write(configfile)   
+                
                 self.lbl_lastip_val.setText(self.last_ip)
+
                 self.last_ip_date = QDate.currentDate().toString('dd.MM.yyyy')   # lastIpate er for dagen vi fikk siste IP
-               # self.lbl_lastip_since_date.setText(self.last_ip_date)
+                # self.lbl_lastip_since_date.setText(self.last_ip_date)
                 self.lastip_time = current_time.toString('hh:mm:ss')             # lastIpTime er for når vi fikk siste IP
-               # self.lbl_lastip_since.setText(self.last_ip_time)
-               # self.last_ip = self.lbl_lastip.text()
+                # self.lbl_lastip_since.setText(self.last_ip_time)
+                # self.last_ip = self.lbl_lastip.text()
                 self.ny_ip_actions()
 
+
 def play_sound(sound):
-        # Play a system sound
-    print("her for å spille lyd")
-    if MyWindow().sound_bool:
-        print("spiller lyd")
+    # Play a system sound
+    if (win.actionSound_alerts.isChecked() == True):
+        # print("spiller lyd: " + sound)
         winsound.PlaySound(sound, winsound.SND_FILENAME)
         
 

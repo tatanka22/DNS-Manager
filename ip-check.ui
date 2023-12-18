@@ -585,6 +585,7 @@
      <string>Settings</string>
     </property>
     <addaction name="actionSound_alerts"/>
+    <addaction name="actionLogging_on"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -649,6 +650,17 @@
    </property>
    <property name="text">
     <string>Sound alerts</string>
+   </property>
+  </action>
+  <action name="actionLogging_on">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Logging</string>
    </property>
   </action>
  </widget>
