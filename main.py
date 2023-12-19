@@ -17,25 +17,7 @@ load_dotenv()
 TOKEN = os.getenv('d_shop_token')
 SECRET = os.getenv('s_shop_secret')
 
-class StandardItem(QStandardItem):
-    list = []
-    colors = []
-    colors.append(QColor(0,0,0))
-    colors.append(QColor(0,0,255))
-
-    def __init__(self, txt='', font_size=12, set_bold=False, color=QColor(0,0,0)):
-        super().__init__()
-        
-        fnt = QFont('Open Sans', font_size)
-        fnt.setBold(set_bold)
-
-        self.setEditable(False)
-        self.setForeground(color)
-        self.setFont(fnt)
-        self.setText(txt)
-   
-        StandardItem.list.append(self)
-        
+      
 class TableModel(QAbstractTableModel):
     def __init__(self, data):
         super(TableModel, self).__init__()
@@ -58,7 +40,7 @@ class TableModel(QAbstractTableModel):
             value_bool = True
             value_bool = value['Watch']
             if isinstance(value_bool, bool):
-                print(value_bool == True)
+                #print('den er bool' + str(value_bool == True))
                 if value_bool == True:
                     return QIcon('Resources/tick.png')
                 return QIcon('Resources/cross.png')
@@ -82,53 +64,61 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         Ui_MainWindow.__init__(self)
         self.setupUi(self)
 
-        # api client for domeneshop
+        # Api client for domeneshop
         self.api_client = Client(TOKEN, SECRET)
 
-        # logger
-        logging.basicConfig(filename='example.log', level=logging.INFO)
-        logging.debug('This message should go to the log file')
-        logging.info(' ' + QDate.currentDate().toString('dd.MM.yyyy') + ' ' + QTime.currentTime().toString('hh:mm:ss') + 
-                          ' So we\'re rolling with logging :-)' )
+        # Log file setup
+        logging.basicConfig(filename='ip-check.log', level=logging.INFO)
+        logging.debug('This message should go to the log file if level is set to debug')
+        logging.info(my_date_time() + 'So we\'re rolling with logging :-)' )
 
-        # parser for config.ini 
+        # Parser for config.ini file setup
         self.cfg_parser = ConfigParser() 
-        
-        self.make_config()  # lager inifil hvis den ikke finnes
+        # Makes config.ini, if it does not exist
+        self.newIni = False # Used to check if we have a new ini-file
+        if not os.path.exists('config.ini'):
+            self.cfg_parser['DEFAULT'] = {'ip_tid': '120', 'sound_alerts': 'True', 'logging': 'True'}
+            self.cfg_parser['IP'] = {'ip': '12.123.12.123', 'ip_since_date': '12.12.12', 'ip_since_time': '00:00:00'}
+            self.cfg_parser['DOMAINS'] = {'Domain1': 'example1.com', 'domain2': 'example2.com'}
+            self.cfg_parser['RECORDS'] = {'test.example1.com': 'True', 'test2.example1.com': 'False'}
+            with open('config.ini', 'w') as configfile:
+                self.cfg_parser.write(configfile)    
+            self.newIni = True
 
-        # reads config.ini
+        # Reads config.ini
         self.cfg_parser.read('config.ini')
         self.ip_tid = int(self.cfg_parser['DEFAULT']['ip_tid'])
-        sound_bool = (self.cfg_parser['DEFAULT']['sound_alerts'] == 'True')
-        self.actionSound_alerts.setChecked(sound_bool)
+        self.actionSound_alerts.setChecked(self.cfg_parser['DEFAULT']['sound_alerts'] == 'True')
         self.lineEdit.setText(str(self.ip_tid))
         self.logging_on = (self.cfg_parser['DEFAULT']['logging'] == 'True')
         self.actionLogging_on.setChecked(self.logging_on)
+        self.ip_from_ini = self.cfg_parser['IP']['ip']
+        self.ip_date_from_ini = self.cfg_parser['IP']['ip_since_date']
+        self.ip_time_from_ini = self.cfg_parser['IP']['ip_since_time']
 
-        #   henter domener direkte
-        self.get_table_domains()
+        # Gets domains and records and loads them into tableview
+        self.get_domains()
 
-        # Timer for å oppdatere vinduet og vise tiden. millisec.
+        # Timer to trigger display updates. millisecs.
         timer1 = QTimer(self)  
         timer1.timeout.connect(self.visTid)
         timer1.start(500)
 
         # Knapp for å sette tiden i sekunder mellom hver ip-sjekk
         self.btn_set_interval.clicked.connect(self.set_button_clicked)
-        self.ip_tid = 120
-        self.lineEdit.setText("120")
-
-        # buttons for domains og table  click
-        self.btn_domains.clicked.connect(self.get_domains)
-        self.btn_table.clicked.connect(self.get_table_domains)
+        
+        # Knapp for å hente domener og records hos registrar
+        self.btn_table.clicked.connect(self.get_domains)
        
+        # Connections for doubleclick in table to toggle watch value of record      
         self.tableView.clicked.connect(self.table_clicked)
         self.tableView.doubleClicked.connect(self.table_double_clicked)
 
+        # Connections for menu choices 
         self.actionSound_alerts.changed.connect(self.actionSound_alerts_changed)
         self.actionLogging_on.changed.connect(self.actionLogging_on_changed)        
 
-        # Validator
+        # Validator too only allow numbers in lineEdit
         validator = QRegExpValidator(QRegExp(r'[0-9]+'))
         self.lineEdit.setValidator(validator)
         
@@ -142,115 +132,95 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.upsince_time = current_time
         self.upsince_date = current_date
 
-        self.last_ip_date = "12.12.12"
-        self.last_ip_time = "00:00:00"
-        self.last_ip = "192.192.192.192"
+        self.current_ip_date = "12.12.12"
+        self.current_ip_time = "00:00:00"
+        self.current_ip = "192.192.192.192"
+     
 
-        self.lbl_lastipsince = "01:01:01"
-        self.lbl_lastip_since_date = "12.12.12"
-        
-
-        
-
-    def make_config(self):  
-        # creates config.ini if it does not exist
-        if not os.path.exists('config.ini'):
-            self.cfg_parser['DEFAULT'] = {'ip_tid': '120', 'sound_alerts': 'True', 'logging': 'True'}
-            self.cfg_parser['DOMAINS'] = {'domain1': 'example.com', 'domain2': 'example2.com'}
-            self.cfg_parser['RECORDS'] = {'record1': 'example.com', 'record2': 'example2.com'}
-            self.cfg_parser['IP'] = {'ip': '12.123.12.123'}
-            with open('config.ini', 'w') as configfile:
-                self.cfg_parser.write(configfile)      
 
     def set_button_clicked(self):
         self.ip_tid = int(self.lineEdit.text())
-        self.next_time = QTime.currentTime().addSecs(self.ip_tid)
-        print('Satt ny ip-tid')
-        print(self.ip_tid)
-        logging.info(' ' +QDate.currentDate().toString('dd.MM.yyyy') + ' ' + QTime.currentTime().toString('hh:mm:ss') +
-                     ' Satt nytt tidsinterval for ip-sjekk : ' + str(self.ip_tid) + ' s. ' )
-                         
+        print('Satt ny ip-tid til: ' + str(self.ip_tid) + ' s.')
 
+        # We also update next time for ip-check, as we now changed the interval        
+        self.next_time = QTime.currentTime().addSecs(self.ip_tid)
+                
+        # Let's also record this in the log
+        if self.logging_on == True:
+            logging.info(my_date_time() + 'Satt nytt tidsinterval for ip-sjekk : ' + str(self.ip_tid) + ' s. ' )
+        
+        # We also apply changes to ini file
+        self.cfg_parser['DEFAULT']['ip_tid'] = str(self.ip_tid)
+        with open('config.ini', 'w') as configfile:
+            self.cfg_parser.write(configfile)
+
+                         
+    # Menu choice for turning on/off sound alerts
     def actionSound_alerts_changed(self):
-        print("sound_alerts clicked")
+        # Update setting in ini-file
         self.cfg_parser['DEFAULT']['sound_alerts'] = str(self.actionSound_alerts.isChecked())
         with open('config.ini', 'w') as configfile:
             self.cfg_parser.write(configfile)
+        # Write to log
         if self.actionSound_alerts.isChecked() == True:
             play_sound('Resources\sound_ipcheck.wav')
-            logging.info(' ' + QDate.currentDate().toString('dd.MM.yyyy') + ' ' + QTime.currentTime().toString('hh:mm:ss') +
-                     ' Sound_alerts turned on' )
+            if self.logging_on == True: 
+                logging.info(my_date_time() + 'Sound_alerts turned on' )
         if self.actionSound_alerts.isChecked() == False:
             play_sound('Resources\sound_ipcheck.wav') ### todo bytt ut med lyd for sound_alerts off
-            logging.info(' ' + QDate.currentDate().toString('dd.MM.yyyy') + ' ' + QTime.currentTime().toString('hh:mm:ss') +
-                     ' Sound_alerts turned off' )             
+            if self.logging_on == True:
+                logging.info(my_date_time() + 'Sound_alerts turned off' )             
 
+    # Menu choice for turning on/off logging to file
     def actionLogging_on_changed(self):
-        # skriver til logg at vi har slått av/på logging setter variabel logging_on til True/False
-        # vi bruker den andre steder vi logger for å sjekke om vi skal logge eller ikke
-        
+        # Skriver til logg at vi har slått av/på logging og setter variabel logging_on til True/False
+        # vi bruker den variabelen andre steder vi logger for å sjekke om vi skal logge eller ikke
         if self.actionLogging_on.isChecked() == True:
-            logging.info(' ' +QDate.currentDate().toString('dd.MM.yyyy') + ' ' + QTime.currentTime().toString('hh:mm:ss')+
-                          ' Logging turned on. Hello world!' )
+            logging.info(my_date_time() + 'Logging turned on. Hello world!' )
             self.logging_on = True
-            #print("logging slått på")
         else: 
-            logging.info(' '+ QDate.currentDate().toString('dd.MM.yyyy') + ' ' + QTime.currentTime().toString('hh:mm:ss')+
-                          ' Logging turned off. See you...'  )
+            logging.info(my_date_time() + 'Logging turned off. See you...'  )
             self.logging_on = False
-            print("logging slått av")
-
-        # skriver i ini-fil
+        
+        # Update setting in ini-file
         self.cfg_parser['DEFAULT']['logging'] = str(self.actionLogging_on.isChecked())
         with open('config.ini', 'w') as configfile:
             self.cfg_parser.write(configfile)
         
-        
+    # Here we will put code for to do with api
     def ny_ip_actions(self):
-        # here we will put code for to do with api
         pass
 
-    def treeViewClicked(self):
-        # print("tree-view clicked")
-        item_ind = self.treeView.currentIndex()
-        print(item_ind.data())
-        
-    def treeViewDoubleClicked(self):
-        #print("tree-view dobleclicked")
-        item_ind = self.treeView.currentIndex()
-                
-        #a=0
-        for item in StandardItem.list:
-            #a +=1
-            #print (item.text() + str(a))
-            
-            if item.text() == str(item_ind.data()):
-                if item.foreground() == StandardItem.colors[0]:
-                    item.setForeground(StandardItem.colors[1])
-                else: 
-                    item.setForeground(StandardItem.colors[0])
-
     def table_clicked(self):
-        print("table clicked")
+        #print("table clicked")
+        pass
 
     def table_double_clicked(self):
-        print("table double clicked")
-        
-        # toggle the 'Watch' value in the corresponding dictionary
-        row = self.tableView.currentIndex().row()
+        # Toggles the 'Watch' value of the record(Row) in the corresponding dictionary
+        row = self.tableView.currentIndex().row() # current row is the one we clicked on
         self.data_rec_list[row]['Watch'] = not self.data_rec_list[row]['Watch']
+        print(self.data_rec_list[row]['Record'])
         
-        # update the view after changes made to data in model
+
+        # Update config.ini with new value for 'Watch'  
+        self.cfg_parser['RECORDS'][self.data_rec_list[row]['Record'] + '.' + self.data_rec_list[row]['Domene']] = str(self.data_rec_list[row]['Watch'])
+        with open('config.ini', 'w') as configfile:
+           self.cfg_parser.write(configfile)
+        print('We wrote new value for Watch to config.ini')
+        
+        # Update the view after changes made to data in model
         self.tableView.model().beginResetModel()
         self.tableView.model().endResetModel()
         self.tableView.update()
 
-    def get_table_domains(self):
-        #   henter domener og records hos registrar. data om disse ender opp i data_rect_list, en liste av dicts.
-        #   legger også til kolonne først i dicten med boolean verdi for om vi vil ip-checke det domenet eller ikke.
+    def get_domains(self):
+        """ Henter domener og records hos registrar. Data om disse ender opp i data_rect_list, en liste av dicts, en dict for hver record.
+            Legger også til kolonne først i dicten med boolean verdi for om vi vil ip-checke det domenet eller ikke.
+            laster også data inn i tableview."""
         self.data_rec_list =[]
         domains = self.api_client.get_domains()
         
+
         for domain in domains:
             dom_txt = format(domain["domain"])
             print(dom_txt)
@@ -263,15 +233,33 @@ class MyWindow(QMainWindow, Ui_MainWindow):
 
                     print(record["id"], record["host"], record["type"], record["data"])
 
-                    mydict = {"Watch": True, "Record": record["host"], "Domene": dom_txt,"Type": record["type"], "TTL": record["ttl"], "IP": record["data"], "ID": record["id"]}
-                    self.data_rec_list.append(mydict)
-        
-        # lager model og laster data.
+                    # Here we should check if we have a record in config.ini for this record
+                    # if we do, we should use that value for 'Watch' instead of False       
+                    if record["host"] + "." + dom_txt in self.cfg_parser['RECORDS']:  
+                        print('We have a record for this domain in config.ini, so we use that value for Watch')  
+                        watch_value = self.cfg_parser['RECORDS'][record["host"] + '.' + dom_txt] == 'True'
+                        mydict = {"Watch": watch_value, "Record": record["host"], "Domene": dom_txt,"Type": record["type"], "TTL": record["ttl"], "IP": record["data"], "ID": record["id"]}
+                        self.data_rec_list.append(mydict)
+                        
+                    else:
+                        # We have no record for this record in config.ini, so we set 'Watch' to False
+                        print('We have no record for this record in config.ini, so we set Watch to False')
+                        mydict = {"Watch": False, "Record": record["host"], "Domene": dom_txt,"Type": record["type"], "TTL": record["ttl"], "IP": record["data"], "ID": record["id"]}
+                        self.data_rec_list.append(mydict)
+                        
+                        
+                        # We also add this record to config.ini with value False    
+                        self.cfg_parser['RECORDS'][record["host"] + '.' + dom_txt] = 'False'
+                        with open('config.ini', 'w') as configfile:
+                            self.cfg_parser.write(configfile)
+                        print('We also add this record to config.ini with value False')
+
+    
+        # Makes a model and loads it into the tableview
         tableModel = TableModel(self.data_rec_list)
-        # laster model inn i tableView som allerede er lagt til i UI-filen(qtdesigner)
         self.tableView.setModel(tableModel)
         
-        # setter kolonnebredder for tableView
+        # Set column width for tableview
         header = self.tableView.horizontalHeader()       
         header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(1, QHeaderView.Stretch)
@@ -281,110 +269,92 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         header.setSectionResizeMode(5, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(6, QHeaderView.ResizeToContents)
 
-           
-    def get_domains(self):
-        treeModel = QStandardItemModel()
-              
-        rootNode = treeModel.invisibleRootItem()
-        self.treeView.setModel(treeModel)
-        self.treeView.setHeaderHidden(True)
+        # Record this in the log
+        if self.logging_on == True:
+            logging.info(my_date_time() +  'get_table_domains: ' + str(self.data_rec_list)   )
 
-        self.treeView.clicked.connect(self.treeViewClicked)
-        self.treeView.doubleClicked.connect(self.treeViewDoubleClicked)
-    
-        self.domains = self.api_client.get_domains()
        
-        for domain in self.domains:
-            print("*****")
-
-            dom_txt = format(domain["domain"])
-            domene = StandardItem(dom_txt, 12)
-            rootNode.appendRow(domene)
-            #domene.setColumnCount(1)
-            print("DNS records for {0}:" + dom_txt)
-            print("id: {0}".format(domain["id"]))
-            
-            for record in self.api_client.get_records(domain["id"]):
-                                
-                if record["type"] == 'A':# and record["host"] != '@' :
-                    if record["host"] == "@":
-                        record["host"] = ""
-                    #print(record["id"], record["host"], record["type"], record["data"])
-                    self.min_record = StandardItem( record['host'] + '.' + dom_txt,12 )
-                                      
-                    domene.insertRow(0,self.min_record)
-        
-        if self.logging_on:
-            logging.info(' ' + QDate.currentDate().toString('dd.MM.yyyy') + ' ' + QTime.currentTime().toString('hh:mm:ss')+
-                         'get_domains: ' + str(self.domains)   ) 
-        
-        myRec = {"host": "test56",
-                "ttl": 3600,
-                "type": "A",
-                "data": "62.24.36.27"
-                }
-
-        myRec2 = {"host": "test56",
-                "ttl": 3600,
-                "type": "A",
-                "data": "88.92.182.26"
-                }
-        # svar = self.api_client.create_record(1834394, myRec)
-        # print("ffffff" + str(svar))
-        #svar = self.api_client.modify_record(1834394, 5947892, myRec2)
-        #print("ffffff" + str(svar))
-        
-        
+       
     def visTid(self):
         current_time = QTime.currentTime()
         current_date = QDate.currentDate()
        
-        # prints time
+        # Displays time
         self.lbl_time_val.setText(current_time.toString('hh:mm:ss'))
         self.lbl_date_val.setText(current_date.toString('dddd dd.MM.yyyy'))
 
-        # prints upsince time
+        # Displays upsince time
         self.lbl_upsince_time_val.setText(self.upsince_time.toString('hh:mm:ss'))
         self.lbl_upsince_date_val.setText(self.upsince_date.toString('dddd dd.MM.yyyy'))
 
-        # printer verdier i labels for last and next ip-check
+        # Displays last and next time for ip-check
         self.lbl_last_ipcheck_time_val.setText(self.last_time.toString())
         self.lbl_next_ipcheck_val.setText(self.next_time.toString())
 
-        # prints values in label for ip
-        self.lbl_lastip_val.setText(self.last_ip)  
+        # Display the current ip
+        self.lbl_current_ip_val.setText(self.current_ip)  
+
+        # Display current ip date and time (i.e. the time we got the current ip)
+        self.lbl_lastip_since_date.setText(self.current_ip_date)   
+        self.lbl_lastip_since_time.setText(self.current_ip_time)
+
 
         if current_time >= self.next_time:  # time for ip-check?
-            # update last and next time for ip-check 
+            # Update last and next time for ip-check 
             self.last_time = current_time 
             self.next_time = self.last_time.addSecs(self.ip_tid)
-            # gets my ip
+           
+            # Gets our ip
             print('sjekker-ip...')
-            self.last_ip = get('https://api.ipify.org').content.decode('utf8')
+            self.current_ip = get('https://api.ipify.org').content.decode('utf8')
                    
-            if self.lbl_lastip_val.text() == self.last_ip:  # har vi samme IP?
-                print('Vi har samme ip')
-                logging.info(' ' + current_date.toString('dd.MM.yyyy') +' ' + current_time.toString('hh:mm:ss') +
-                             ' Vi har samme ip: ' + self.last_ip )
+            if self.lbl_current_ip_val.text() == self.current_ip:  # har vi samme IP?
+                print('We have the same ip')
                 play_sound('Resources\sound_ipcheck.wav')
-            else:
-                print('Vi har fått ny ip')
-                logging.info(' ' + current_date.toString('dd.MM.yyyy') +' ' + current_time.toString('hh:mm:ss') +
-                             ' Vi fikk ny ip: ' + self.last_ip )
-                play_sound('Resources\sound_new_ip.wav')
-                # ny ip til ini-fil
-                self.cfg_parser['IP']['ip'] = self.last_ip
-                with open('config.ini', 'w') as configfile:
-                    self.cfg_parser.write(configfile)   
+                if self.logging_on == True:
+                    logging.info(my_date_time() + 'We have the same ip: ' + self.current_ip )
                 
-                self.lbl_lastip_val.setText(self.last_ip)
-
-                self.last_ip_date = QDate.currentDate().toString('dd.MM.yyyy')   # lastIpate er for dagen vi fikk siste IP
-                # self.lbl_lastip_since_date.setText(self.last_ip_date)
-                self.lastip_time = current_time.toString('hh:mm:ss')             # lastIpTime er for når vi fikk siste IP
-                # self.lbl_lastip_since.setText(self.last_ip_time)
-                # self.last_ip = self.lbl_lastip.text()
-                self.ny_ip_actions()
+            else:
+                # Looks like we have a new ip
+                # but we need to compare with ip from ini-file, as we might have just restarted the program
+                if self.current_ip != self.ip_from_ini:
+                    if self.newIni == True:
+                        print('we have a new ini-file so we have no prior record of this ip')
+                        self.current_ip_date = QDate.currentDate().toString('dd.MM.yyyy')  
+                        self.current_ip_time = current_time.toString('hh:mm:ss') 
+                         # Set new ip in config.ini
+                        self.cfg_parser['IP']['ip'] = self.current_ip
+                        self.cfg_parser['IP']['ip_since_date'] = current_date.toString('dd.MM.yyyy')
+                        self.cfg_parser['IP']['ip_since_time'] = current_time.toString('hh:mm:ss')
+                        with open('config.ini', 'w') as configfile:
+                            self.cfg_parser.write(configfile) 
+                        self.newIni = False
+                    else:
+                        # We actually have a new ip
+                        print('We actually have a new ip')
+                        play_sound('Resources\sound_new_ip.wav')
+                        if self.logging_on == True:
+                            logging.info(my_date_time() + 'We have a new ip: ' + self.current_ip )
+                        
+                        # Set new ip in config.ini
+                        self.cfg_parser['IP']['ip'] = self.current_ip
+                        self.cfg_parser['IP']['ip_since_date'] = current_date.toString('dd.MM.yyyy')
+                        self.cfg_parser['IP']['ip_since_time'] = current_time.toString('hh:mm:ss')
+                        with open('config.ini', 'w') as configfile:
+                            self.cfg_parser.write(configfile)   
+                                    
+                        self.current_ip_date = QDate.currentDate().toString('dd.MM.yyyy')  
+                        self.current_ip_time = current_time.toString('hh:mm:ss')           
+                    
+                        self.ny_ip_actions()
+                else:
+                    print ('Looks like we had a restart and still have the same ip: ' + self.current_ip)
+                    self.current_ip_date = self.ip_date_from_ini
+                    self.current_ip_time = self.ip_time_from_ini
+                    if self.logging_on == True:
+                        logging.info(my_date_time() + 'Looks like we had a restart and still have the same ip: ' + self.current_ip )
+                    pass
+                
 
 
 def play_sound(sound):
@@ -392,6 +362,15 @@ def play_sound(sound):
     if (win.actionSound_alerts.isChecked() == True):
         # print("spiller lyd: " + sound)
         winsound.PlaySound(sound, winsound.SND_FILENAME)
+
+def my_date_time():
+    """Returns current date and time as one string + spaces"""
+    current_time = QTime.currentTime()
+    current_date = QDate.currentDate()
+    #print(current_time.toString('hh:mm:ss'))
+    #print(current_date.toString('dddd dd.MM.yyyy'))
+    dt = current_date.toString(' ' + 'dd.MM.yyyy') + ' ' + current_time.toString('hh:mm:ss' + ' ')
+    return dt
         
 
 if __name__ == '__main__':

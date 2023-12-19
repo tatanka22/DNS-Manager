@@ -115,8 +115,8 @@
      <widget class="QPushButton" name="btn_set_interval">
       <property name="geometry">
        <rect>
-        <x>470</x>
-        <y>330</y>
+        <x>450</x>
+        <y>340</y>
         <width>41</width>
         <height>23</height>
        </rect>
@@ -302,7 +302,7 @@
        <string>Next ip-check</string>
       </property>
      </widget>
-     <widget class="QLabel" name="lbl_lastip_since_time_val">
+     <widget class="QLabel" name="lbl_lastip_since_time">
       <property name="geometry">
        <rect>
         <x>410</x>
@@ -325,12 +325,12 @@
        <string>00:00:00</string>
       </property>
      </widget>
-     <widget class="QLabel" name="lbl_lastipsince">
+     <widget class="QLabel" name="lbl_since">
       <property name="geometry">
        <rect>
-        <x>370</x>
+        <x>360</x>
         <y>220</y>
-        <width>111</width>
+        <width>31</width>
         <height>21</height>
        </rect>
       </property>
@@ -343,7 +343,7 @@
        <string>Since:</string>
       </property>
      </widget>
-     <widget class="QLabel" name="lbl_lastip_val">
+     <widget class="QLabel" name="lbl_current_ip_val">
       <property name="geometry">
        <rect>
         <x>220</x>
