@@ -10,6 +10,70 @@
     <height>749</height>
    </rect>
   </property>
+  <property name="palette">
+   <palette>
+    <active>
+     <colorrole role="Base">
+      <brush brushstyle="SolidPattern">
+       <color alpha="255">
+        <red>255</red>
+        <green>255</green>
+        <blue>255</blue>
+       </color>
+      </brush>
+     </colorrole>
+     <colorrole role="Window">
+      <brush brushstyle="SolidPattern">
+       <color alpha="255">
+        <red>240</red>
+        <green>240</green>
+        <blue>240</blue>
+       </color>
+      </brush>
+     </colorrole>
+    </active>
+    <inactive>
+     <colorrole role="Base">
+      <brush brushstyle="SolidPattern">
+       <color alpha="255">
+        <red>255</red>
+        <green>255</green>
+        <blue>255</blue>
+       </color>
+      </brush>
+     </colorrole>
+     <colorrole role="Window">
+      <brush brushstyle="SolidPattern">
+       <color alpha="255">
+        <red>240</red>
+        <green>240</green>
+        <blue>240</blue>
+       </color>
+      </brush>
+     </colorrole>
+    </inactive>
+    <disabled>
+     <colorrole role="Base">
+      <brush brushstyle="SolidPattern">
+       <color alpha="255">
+        <red>240</red>
+        <green>240</green>
+        <blue>240</blue>
+       </color>
+      </brush>
+     </colorrole>
+     <colorrole role="Window">
+      <brush brushstyle="SolidPattern">
+       <color alpha="255">
+        <red>240</red>
+        <green>240</green>
+        <blue>240</blue>
+       </color>
+      </brush>
+     </colorrole>
+    </disabled>
+   </palette>
+  </property>
   <property name="focusPolicy">
    <enum>Qt::ClickFocus</enum>
   </property>
@@ -22,9 +86,76 @@
      <rect>
       <x>110</x>
       <y>20</y>
-      <width>551</width>
+      <width>611</width>
       <height>681</height>
      </rect>
+    </property>
+    <property name="palette">
+     <palette>
+      <active>
+       <colorrole role="Base">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
+          <red>255</red>
+          <green>255</green>
+          <blue>255</blue>
+         </color>
+        </brush>
+       </colorrole>
+       <colorrole role="Window">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
+          <red>240</red>
+          <green>240</green>
+          <blue>240</blue>
+         </color>
+        </brush>
+       </colorrole>
+      </active>
+      <inactive>
+       <colorrole role="Base">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
+          <red>255</red>
+          <green>255</green>
+          <blue>255</blue>
+         </color>
+        </brush>
+       </colorrole>
+       <colorrole role="Window">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
+          <red>240</red>
+          <green>240</green>
+          <blue>240</blue>
+         </color>
+        </brush>
+       </colorrole>
+      </inactive>
+      <disabled>
+       <colorrole role="Base">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
+          <red>240</red>
+          <green>240</green>
+          <blue>240</blue>
+         </color>
+        </brush>
+       </colorrole>
+       <colorrole role="Window">
+        <brush brushstyle="SolidPattern">
+         <color alpha="255">
+          <red>240</red>
+          <green>240</green>
+          <blue>240</blue>
+         </color>
+        </brush>
+       </colorrole>
+      </disabled>
+     </palette>
+    </property>
+    <property name="autoFillBackground">
+     <bool>false</bool>
     </property>
     <property name="currentIndex">
      <number>0</number>
@@ -97,8 +228,8 @@
      <widget class="QLabel" name="lbl_lastip_since_date">
       <property name="geometry">
        <rect>
-        <x>470</x>
-        <y>220</y>
+        <x>300</x>
+        <y>250</y>
         <width>71</width>
         <height>20</height>
        </rect>
@@ -138,7 +269,7 @@
        <rect>
         <x>110</x>
         <y>340</y>
-        <width>81</width>
+        <width>141</width>
         <height>21</height>
        </rect>
       </property>
@@ -156,8 +287,8 @@
        <rect>
         <x>110</x>
         <y>320</y>
-        <width>91</width>
-        <height>16</height>
+        <width>141</width>
+        <height>21</height>
        </rect>
       </property>
       <property name="font">
@@ -173,9 +304,9 @@
       <property name="geometry">
        <rect>
         <x>30</x>
-        <y>310</y>
-        <width>130</width>
-        <height>39</height>
+        <y>320</y>
+        <width>71</width>
+        <height>21</height>
        </rect>
       </property>
       <property name="font">
@@ -289,7 +420,7 @@
        <rect>
         <x>30</x>
         <y>340</y>
-        <width>131</width>
+        <width>71</width>
         <height>21</height>
        </rect>
       </property>
@@ -305,8 +436,8 @@
      <widget class="QLabel" name="lbl_lastip_since_time">
       <property name="geometry">
        <rect>
-        <x>410</x>
-        <y>220</y>
+        <x>240</x>
+        <y>250</y>
         <width>51</width>
         <height>21</height>
        </rect>
@@ -328,8 +459,8 @@
      <widget class="QLabel" name="lbl_since">
       <property name="geometry">
        <rect>
-        <x>360</x>
-        <y>220</y>
+        <x>190</x>
+        <y>250</y>
         <width>31</width>
         <height>21</height>
        </rect>
@@ -346,7 +477,7 @@
      <widget class="QLabel" name="lbl_current_ip_val">
       <property name="geometry">
        <rect>
-        <x>220</x>
+        <x>210</x>
         <y>210</y>
         <width>131</width>
         <height>39</height>
@@ -355,7 +486,7 @@
       <property name="font">
        <font>
         <family>Roboto</family>
-        <pointsize>12</pointsize>
+        <pointsize>14</pointsize>
         <weight>75</weight>
         <bold>true</bold>
        </font>
@@ -430,6 +561,43 @@
         <height>611</height>
        </rect>
       </property>
+      <property name="palette">
+       <palette>
+        <active>
+         <colorrole role="Base">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>255</red>
+            <green>255</green>
+            <blue>255</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </active>
+        <inactive>
+         <colorrole role="Base">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>255</red>
+            <green>255</green>
+            <blue>255</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </inactive>
+        <disabled>
+         <colorrole role="Base">
+          <brush brushstyle="SolidPattern">
+           <color alpha="255">
+            <red>56</red>
+            <green>56</green>
+            <blue>56</blue>
+           </color>
+          </brush>
+         </colorrole>
+        </disabled>
+       </palette>
+      </property>
      </widget>
      <widget class="QPushButton" name="btn_domains">
       <property name="geometry">
@@ -449,16 +617,6 @@
      <attribute name="title">
       <string>Table view</string>
      </attribute>
-     <widget class="QTableView" name="tableView">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>30</y>
-        <width>511</width>
-        <height>621</height>
-       </rect>
-      </property>
-     </widget>
      <widget class="QPushButton" name="btn_table">
       <property name="geometry">
        <rect>
@@ -470,6 +628,19 @@
       </property>
       <property name="text">
        <string>Load Domains</string>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="btn_update_dns">
+      <property name="geometry">
+       <rect>
+        <x>360</x>
+        <y>0</y>
+        <width>75</width>
+        <height>23</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string>Update dns</string>
       </property>
      </widget>
     </widget>

@@ -3,9 +3,9 @@ import sys
 import os
 from dotenv import load_dotenv
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QApplication, QMainWindow, QCheckBox, QHeaderView
-from PyQt5.QtCore import QTimer, QTime, QDate, QRegExp, QModelIndex, Qt, QAbstractTableModel
-from PyQt5.QtGui import QRegExpValidator, QStandardItem, QColor, QFont, QStandardItemModel, QIcon
+from PyQt5.QtWidgets import QApplication, QTableWidget, QMainWindow, QCheckBox, QHeaderView, QTableView
+from PyQt5.QtCore import QTimer, QTime, QDate, QDateTime, QRegExp, Qt, QAbstractTableModel, QRect
+from PyQt5.QtGui import QRegExpValidator, QIcon, QPalette, QColor
 from MyGui import Ui_MainWindow
 from domeneshop import Client
 from configparser import ConfigParser
@@ -17,6 +17,42 @@ load_dotenv()
 TOKEN = os.getenv('d_shop_token')
 SECRET = os.getenv('s_shop_secret')
 
+class MyTableView(QTableView):
+    def __init__(self, parent=None):
+        super(MyTableView, self).__init__(parent)
+
+        self.context_menu = QtWidgets.QMenu(self)
+        table_action1 = self.context_menu.addAction("Modify record")
+        table_action2 = self.context_menu.addAction("Delete record")
+        table_action3 = self.context_menu.addAction("Add record")
+        
+        table_action1.triggered.connect(self.modify_record)
+        table_action2.triggered.connect(self.delete_record)
+        table_action3.triggered.connect(self.add_record)
+
+    def modify_record(self):
+        print("Modify record")
+        #row = self.tableView.currentIndex().row() # current row is the one we clicked on
+        #self.data_rec_list[row]['Watch'] = not self.data_rec_list[row]['Watch']
+        #print(self.data_rec_list[row]['Record'])
+
+    def delete_record(self):
+        print("Delete record")
+        #row = self.tableView.currentIndex().row() # current row is the one we clicked on
+        #self.data_rec_list[row]['Watch'] = not self.data_rec_list[row]['Watch']
+        #print(self.data_rec_list[row]['Record'])
+
+    def add_record(self):
+        print("Add record")
+        #row = self.tableView.currentIndex().row() # current row is the one we clicked on
+        #self.data_rec_list[row]['Watch'] = not self.data_rec_list[row]['Watch']
+        #print(self.data_rec_list[row]['Record'])
+   
+    def contextMenuEvent(self, event):
+        # This method is called whenever the user right-clicks on the table view
+        #print("Right-click detected")
+        self.context_menu.exec_(event.globalPos())
+
       
 class TableModel(QAbstractTableModel):
     def __init__(self, data):
@@ -25,7 +61,7 @@ class TableModel(QAbstractTableModel):
         self._headers = list(data[0].keys()) if data else []
 
     def data(self, index, role):
-        if role == Qt.DisplayRole and index.column() != 0:
+        if role == (Qt.DisplayRole or role == Qt.EditRole) and index.column() != 0:
             row_data = self._data[index.row()]
             column_key = self._headers[index.column()]
             return row_data[column_key]
@@ -46,6 +82,13 @@ class TableModel(QAbstractTableModel):
                 return QIcon('Resources/cross.png')
             return None
             
+    def flags(self, index):
+        return Qt.ItemIsSelectable|Qt.ItemIsEnabled|Qt.ItemIsEditable
+    
+    def setData(self, index, value, role):
+        if role == Qt.EditRole:
+            self._data[index.row()][index.column()] = value
+            return True
     
     def rowCount(self, index):
         return len(self._data)
@@ -66,6 +109,11 @@ class MyWindow(QMainWindow, Ui_MainWindow):
 
         # Api client for domeneshop
         self.api_client = Client(TOKEN, SECRET)
+
+        # Tableview setup (we now use our own class MyTableView, so we moved it from designer and MyGui.py)
+        self.tableView = MyTableView(self.tab)
+        self.tableView.setGeometry(QRect(0, 30, 611, 621))
+        self.tableView.setObjectName("tableView")
 
         # Log file setup
         logging.basicConfig(filename='ip-check.log', level=logging.INFO)
@@ -101,18 +149,20 @@ class MyWindow(QMainWindow, Ui_MainWindow):
 
         # Timer to trigger display updates. millisecs.
         timer1 = QTimer(self)  
-        timer1.timeout.connect(self.visTid)
+        timer1.timeout.connect(self.displayUpdates)
         timer1.start(500)
 
-        # Knapp for å sette tiden i sekunder mellom hver ip-sjekk
+        # Connection for button to set time interval for ip-check
         self.btn_set_interval.clicked.connect(self.set_button_clicked)
-        
-        # Knapp for å hente domener og records hos registrar
+        # Connection for button to get domains and records from registrar
         self.btn_table.clicked.connect(self.get_domains)
-       
-        # Connections for doubleclick in table to toggle watch value of record      
+        # Connection for button to update records with new ip
+        self.btn_update_dns.clicked.connect(self.ny_ip_actions)
+        
+        # Connections for click in table to toggle watch value of record      
         self.tableView.clicked.connect(self.table_clicked)
         self.tableView.doubleClicked.connect(self.table_double_clicked)
+        #self.tableView.rightclicked.connect(self.table_clicked)
 
         # Connections for menu choices 
         self.actionSound_alerts.changed.connect(self.actionSound_alerts_changed)
@@ -126,16 +176,17 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         current_time = QTime.currentTime()
         current_date = QDate.currentDate()
 
-        self.last_time = current_time
-        self.next_time = current_time 
+        self.last_datetime = QDateTime.currentDateTime()
+        self.next_datetime = QDateTime.currentDateTime()
 
-        self.upsince_time = current_time
-        self.upsince_date = current_date
+        self.upsince_datetime = QDateTime.currentDateTime()
 
+        # Dummy values for current ip as we will not yet check our ip before first timer event to trigger display updates
         self.current_ip_date = "12.12.12"
         self.current_ip_time = "00:00:00"
         self.current_ip = "192.192.192.192"
-     
+
+        
 
 
     def set_button_clicked(self):
@@ -143,7 +194,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         print('Satt ny ip-tid til: ' + str(self.ip_tid) + ' s.')
 
         # We also update next time for ip-check, as we now changed the interval        
-        self.next_time = QTime.currentTime().addSecs(self.ip_tid)
+        self.next_datetime = QDateTime.currentDateTime().addSecs(self.ip_tid)
                 
         # Let's also record this in the log
         if self.logging_on == True:
@@ -153,8 +204,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.cfg_parser['DEFAULT']['ip_tid'] = str(self.ip_tid)
         with open('config.ini', 'w') as configfile:
             self.cfg_parser.write(configfile)
-
-                         
+                       
     # Menu choice for turning on/off sound alerts
     def actionSound_alerts_changed(self):
         # Update setting in ini-file
@@ -189,10 +239,35 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         
     # Here we will put code for to do with api
     def ny_ip_actions(self):
-        pass
+        """Actions to take with  API when we have a new ip"""
+        # We need to update the records we are watching with the new ip
+        for record in self.data_rec_list:                   
+            if record["Watch"] == True:
+                print('Updating record: ' + record["Record"] + '.' + record["Domene"] + ' with new ip: ' + self.current_ip)
+                if self.logging_on == True:
+                    logging.info(my_date_time() + 'Updating record: ' + record["Record"] + '.' + record["Domene"] + ' with new ip: ' + self.current_ip )
+                try:
+                    myRec = {"host": record["Record"],
+                            "ttl": 3600,
+                            "type": "A",
+                            "data": str(self.current_ip)
+                            }
+
+                    self.api_client.modify_record(record["Dom ID"], record["Rec ID"], myRec)
+                except:
+                    print('Could not update record: ' + record["Record"] + '.' + record["Domene"] + ' with new ip: ' + self.current_ip)
+                    if self.logging_on == True:
+                        logging.info(my_date_time() + 'Could not update record: ' + record["Record"] + '.' + record["Domene"] + ' with new ip: ' + self.current_ip )
+                    continue
+        # As we have updated some records, we can now reload domains and records from registrar
+        self.get_domains()
+       
+        # svar = self.api_client.create_record(1834394, myRec)
+        # print("ffffff" + str(svar))
+        
 
     def table_clicked(self):
-        #print("table clicked")
+        print("table clicked")
         pass
 
     def table_double_clicked(self):
@@ -201,31 +276,54 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.data_rec_list[row]['Watch'] = not self.data_rec_list[row]['Watch']
         print(self.data_rec_list[row]['Record'])
         
-
         # Update config.ini with new value for 'Watch'  
-        self.cfg_parser['RECORDS'][self.data_rec_list[row]['Record'] + '.' + self.data_rec_list[row]['Domene']] = str(self.data_rec_list[row]['Watch'])
+        curr_record = self.data_rec_list[row]['Record'] + '.' + self.data_rec_list[row]['Domene']
+        value = self.data_rec_list[row]['Watch']
+        self.cfg_parser['RECORDS'][curr_record] = str(value)
         with open('config.ini', 'w') as configfile:
            self.cfg_parser.write(configfile)
-        print('We wrote new value for Watch to config.ini')
+
+        print('We wrote new value for ' + curr_record + ' to config.ini file. ' + 'Watch set to: ' + str(value) )
         
+        # We also log this to file
+        if self.logging_on == True:
+            logging.info(my_date_time() + 'New value for ' + curr_record +   '  Watch set to: ' + str(value) )
+
         # Update the view after changes made to data in model
         self.tableView.model().beginResetModel()
         self.tableView.model().endResetModel()
         self.tableView.update()
 
     def get_domains(self):
-        """ Henter domener og records hos registrar. Data om disse ender opp i data_rect_list, en liste av dicts, en dict for hver record.
+        """ Henter domener og records hos registrar. Records ender opp i data_rect_list, en liste av dicts, en dict for hver record.
             Legger også til kolonne først i dicten med boolean verdi for om vi vil ip-checke det domenet eller ikke.
             laster også data inn i tableview."""
         self.data_rec_list =[]
-        domains = self.api_client.get_domains()
-        
+        domains = []
+        try:
+            domains = self.api_client.get_domains()
+        except:
+            print('Could not get domains from registrar')
+            if self.logging_on == True:
+                logging.info(my_date_time() + 'Could not get domains from registrar' )
+            return
+               
 
         for domain in domains:
             dom_txt = format(domain["domain"])
+            records = []
             print(dom_txt)
             
-            for record in self.api_client.get_records(domain["id"]):
+            try:
+                # Get records for this domain
+                records = self.api_client.get_records(domain["id"]) 
+            except:
+                print('Could not get records for domain: ' + dom_txt)
+                if self.logging_on == True:
+                    logging.info(my_date_time() + 'Could not get records for domain: ' + dom_txt )
+                continue
+
+            for record in records:
                                
                 if record["type"] == 'A':#  and record["host"] != '@' :
                     if record["host"] == "@":
@@ -238,16 +336,28 @@ class MyWindow(QMainWindow, Ui_MainWindow):
                     if record["host"] + "." + dom_txt in self.cfg_parser['RECORDS']:  
                         print('We have a record for this domain in config.ini, so we use that value for Watch')  
                         watch_value = self.cfg_parser['RECORDS'][record["host"] + '.' + dom_txt] == 'True'
-                        mydict = {"Watch": watch_value, "Record": record["host"], "Domene": dom_txt,"Type": record["type"], "TTL": record["ttl"], "IP": record["data"], "ID": record["id"]}
+                        mydict = {"Watch": watch_value, 
+                                  "Record": record["host"], 
+                                  "Domene": dom_txt,"Type": record["type"], 
+                                  "TTL": record["ttl"], "IP": record["data"], 
+                                  "Rec ID": record["id"],
+                                  "Dom ID": domain["id"]}
+                        
                         self.data_rec_list.append(mydict)
                         
                     else:
                         # We have no record for this record in config.ini, so we set 'Watch' to False
                         print('We have no record for this record in config.ini, so we set Watch to False')
-                        mydict = {"Watch": False, "Record": record["host"], "Domene": dom_txt,"Type": record["type"], "TTL": record["ttl"], "IP": record["data"], "ID": record["id"]}
+                        mydict = {"Watch": False, 
+                                  "Record": record["host"], 
+                                  "Domene": dom_txt,"Type": record["type"],
+                                    "TTL": record["ttl"], 
+                                    "IP": record["data"], 
+                                    "RecID": record["id"],
+                                    "Dom ID": domain["id"]}
+                        
                         self.data_rec_list.append(mydict)
-                        
-                        
+                       
                         # We also add this record to config.ini with value False    
                         self.cfg_parser['RECORDS'][record["host"] + '.' + dom_txt] = 'False'
                         with open('config.ini', 'w') as configfile:
@@ -255,7 +365,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
                         print('We also add this record to config.ini with value False')
 
     
-        # Makes a model and loads it into the tableview
+        # We Make a model and loads it into the tableview
         tableModel = TableModel(self.data_rec_list)
         self.tableView.setModel(tableModel)
         
@@ -268,28 +378,30 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(5, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(6, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(7, QHeaderView.ResizeToContents)
 
         # Record this in the log
         if self.logging_on == True:
             logging.info(my_date_time() +  'get_table_domains: ' + str(self.data_rec_list)   )
 
-       
-       
-    def visTid(self):
+               
+    def displayUpdates(self):
+        """Displays time and date in GUI. Also checks if it is time to check our ip."""
         current_time = QTime.currentTime()
         current_date = QDate.currentDate()
-       
+        current_date_time = QDateTime.currentDateTime()
+
         # Displays time
         self.lbl_time_val.setText(current_time.toString('hh:mm:ss'))
         self.lbl_date_val.setText(current_date.toString('dddd dd.MM.yyyy'))
 
         # Displays upsince time
-        self.lbl_upsince_time_val.setText(self.upsince_time.toString('hh:mm:ss'))
-        self.lbl_upsince_date_val.setText(self.upsince_date.toString('dddd dd.MM.yyyy'))
+        self.lbl_upsince_time_val.setText(self.upsince_datetime.toString('hh:mm:ss'))
+        self.lbl_upsince_date_val.setText(self.upsince_datetime.toString('dddd dd.MM.yyyy'))
 
         # Displays last and next time for ip-check
-        self.lbl_last_ipcheck_time_val.setText(self.last_time.toString())
-        self.lbl_next_ipcheck_val.setText(self.next_time.toString())
+        self.lbl_last_ipcheck_time_val.setText(self.last_datetime.toString('dddd dd.MM.yyyy hh:mm:ss'))
+        self.lbl_next_ipcheck_val.setText(self.next_datetime.toString('dddd dd.MM.yyyy hh:mm:ss'))
 
         # Display the current ip
         self.lbl_current_ip_val.setText(self.current_ip)  
@@ -299,14 +411,21 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.lbl_lastip_since_time.setText(self.current_ip_time)
 
 
-        if current_time >= self.next_time:  # time for ip-check?
+        if current_date_time >= self.next_datetime:  # time for ip-check?
             # Update last and next time for ip-check 
-            self.last_time = current_time 
-            self.next_time = self.last_time.addSecs(self.ip_tid)
+            self.last_datetime = current_date_time 
+            self.next_datetime = current_date_time.addSecs(self.ip_tid)
            
             # Gets our ip
             print('sjekker-ip...')
-            self.current_ip = get('https://api.ipify.org').content.decode('utf8')
+            try:
+                self.current_ip = get('https://api.ipify.org').content.decode('utf8')
+            except:
+                print('Could not get ip from api.ipify.org. Retrying in 5 secs...')
+                if self.logging_on == True:
+                    logging.info(my_date_time() + 'Could not get ip. Retrying in 5 secs...' )
+                    self.next_datetime = self.last_datetime.addSecs(5)
+                return
                    
             if self.lbl_current_ip_val.text() == self.current_ip:  # har vi samme IP?
                 print('We have the same ip')
@@ -364,17 +483,63 @@ def play_sound(sound):
         winsound.PlaySound(sound, winsound.SND_FILENAME)
 
 def my_date_time():
-    """Returns current date and time as one string + spaces"""
-    current_time = QTime.currentTime()
-    current_date = QDate.currentDate()
-    #print(current_time.toString('hh:mm:ss'))
-    #print(current_date.toString('dddd dd.MM.yyyy'))
-    dt = current_date.toString(' ' + 'dd.MM.yyyy') + ' ' + current_time.toString('hh:mm:ss' + ' ')
+    """Returns current datetime[QDataTime object]  + leading and trailing spaces."""
+    dt = ' ' + QDateTime.currentDateTime().toString('dddd dd.MM.yyyy hh:mm:ss' + ' ') 
     return dt
-        
+
+def set_dark_theme(app):
+    palette = QPalette()
+
+    # Set color for different elements:
+    palette.setColor(QPalette.Window, QColor(53, 53, 53))
+    palette.setColor(QPalette.WindowText, Qt.white)
+    palette.setColor(QPalette.Base, QColor(25, 25, 25))
+    palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
+    palette.setColor(QPalette.ToolTipBase, Qt.white)
+    palette.setColor(QPalette.ToolTipText, Qt.white)
+    palette.setColor(QPalette.Text, Qt.white)
+    palette.setColor(QPalette.Button, QColor(53, 53, 53))
+    palette.setColor(QPalette.ButtonText, Qt.white)
+    palette.setColor(QPalette.BrightText, Qt.red)
+    palette.setColor(QPalette.Link, QColor(42, 130, 218))
+    palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
+    palette.setColor(QPalette.HighlightedText, Qt.black)
+    
+
+    app.setPalette(palette)
+        # Set the color of the QTabWidget
+    app.setStyleSheet("""
+    QTabWidget::pane { /* The tab widget frame */
+        border-top: 2px solid #C2C7CB;
+    }
+    QTabWidget::tab-bar {
+        left: 5px; /* move to the right by 5px */
+    }
+    QTabBar::tab {
+        background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                    stop: 0 #E1E1E1, stop: 0.4 #DDDDDD,
+                                    stop: 0.5 #D8D8D8, stop: 1.0 #D3D3D3);
+        border: 2px solid #C4C4C3;
+        border-bottom-color: #C2C7CB; /* same as the pane color */
+        border-top-left-radius: 4px;
+        border-top-right-radius: 4px;
+        min-width: 8ex;
+        padding: 2px;
+    }
+    QTabBar::tab:selected, QTabBar::tab:hover {
+        background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                    stop: 0 #fafafa, stop: 0.4 #f4f4f4,
+                                    stop: 0.5 #e7e7e7, stop: 1.0 #fafafa);
+    }
+    QTabBar::tab:selected {
+        border-color: #9B9B9B;
+        border-bottom-color: #C2C7CB; /* same as pane color */
+    }
+    """)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+    #set_dark_theme(app)
     win = MyWindow()
     win.show()
     sys.exit(app.exec_())
