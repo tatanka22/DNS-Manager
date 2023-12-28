@@ -48,13 +48,18 @@ class MyTableView(QTableView):
         win.win2.label_12.setText(win.data_rec_list[row]['Type'])
         win.win2.lineEdit_3.setText(str(win.data_rec_list[row]['TTL']))
         win.win2.lineEdit_4.setText(win.data_rec_list[row]['IP'])
-        # Disable delete button in win.win2    
+        # Disable delete and add button in win.win2    
         win.win2.btn_Delete_rec.hide()
+        win.win2.btn_Add_rec.hide()
         # Disable label 13-16
         win.win2.label_13.hide()
         win.win2.label_14.hide()
         win.win2.label_15.hide()
         win.win2.label_16.hide()
+        win.win2.label_17.hide()
+        win.win2.label_18.hide()
+        win.win2.lineEdit_1.hide()
+        win.win2.lineEdit_2.hide()
 
 
     def delete_record(self):
@@ -74,21 +79,52 @@ class MyTableView(QTableView):
         win.win2.label_15.setText(str(win.data_rec_list[row]['TTL']))
         win.win2.label_16.setText(win.data_rec_list[row]['IP'])
        
-        # Disable Submit button in win.win2    
+        # Disable Submit and Add_rec button in win.win2    
         win.win2.btn_Submit_rec.hide()
+        win.win2.btn_Add_rec.hide()
         
         # Disable lineEdit_3 and lineEdit_4
         win.win2.label_3.hide()
         win.win2.label_4.hide()
         win.win2.lineEdit_3.hide()
         win.win2.lineEdit_4.hide()
+        win.win2.label_17.hide()
+        win.win2.label_18.hide()
+        win.win2.lineEdit_1.hide()
+        win.win2.lineEdit_2.hide()
 
 
     def add_record(self):
         print("Add record")
-        #row = self.tableView.currentIndex().row() # current row is the one we clicked on
-        #self.data_rec_list[row]['Watch'] = not self.data_rec_list[row]['Watch']
-        #print(self.data_rec_list[row]['Record'])
+
+        win.win2 = MyCrudWindow()  
+        win.win2.setWindowTitle( "Add record")
+        win.win2.show()
+
+        # Find current row and fill in data in win.win2
+        row = win.tableView.currentIndex().row() # current row is the one we clicked on
+        win.win2.label_10.setText(win.data_rec_list[row]['Domene'])
+        win.win2.label_7.setText(str(win.data_rec_list[row]['Dom ID']))
+
+        win.win2.lineEdit_3.setText("3600")
+        win.win2.lineEdit_4.setText(win.current_ip)
+       
+        # Disable Submit and Delete_rec button in win.win2    
+        win.win2.btn_Submit_rec.hide()
+        win.win2.btn_Delete_rec .hide()
+        
+        # Disable lineEdit_3 and lineEdit_4
+        win.win2.label_6.hide()
+        win.win2.label.hide()
+        win.win2.label_2.hide()
+        win.win2.label_13.hide()
+        win.win2.label_14.hide()
+        win.win2.label_15.hide()
+        win.win2.label_16.hide()
+        win.win2.label_8.hide()
+        win.win2.label_11.hide()
+        win.win2.label_12.hide()
+        
    
     def contextMenuEvent(self, event):
         # This method is called whenever the user right-clicks on the table view
@@ -154,6 +190,7 @@ class MyCrudWindow(QMainWindow, Ui_CrudWindow):
 
         self.btn_Submit_rec.clicked.connect(self.submit_rec)
         self.btn_Delete_rec.clicked.connect(self.delete_rec)
+        self.btn_Add_rec.clicked.connect(self.add_rec)
         self.btn_Cancel.clicked.connect(self.close)
 
     def submit_rec(self):
@@ -205,6 +242,28 @@ class MyCrudWindow(QMainWindow, Ui_CrudWindow):
             if win.logging_on == True:
                 logging.info(my_date_time() + 'Could not delete record: ' + win.win2.label_11. text() + 
                              '.' + win.win2.label_10.text()  )
+        win.get_domains()
+        win.win2.close()
+
+    def add_rec(self):
+        print("adding rec")
+        
+        
+        try:
+            myRec = {"host": win.win2.lineEdit_1.text(),            # Record (host)
+                    "ttl": int(win.win2.lineEdit_3.text()),         # TTL
+                    "type": win.win2.lineEdit_2.text(),             # Type
+                    "data": str(win.win2.lineEdit_4.text())         # IP
+                    }
+            win.api_client.create_record(int(win.win2.label_7.text()), myRec)
+            print('Record added: ' + win.win2.lineEdit_1.text() + '.' + win.win2.label_10.text()  )
+    
+        except:
+            print('Could not create record: ' + win.win2.lineEdit_1. text() + '.' + win.win2.label_10.text() + 
+                  ' with new ip: ' + str(win.win2.lineEdit_4.text()) )
+            if win.logging_on == True:
+                logging.info(my_date_time() + 'Could not create record: ' + win.win2.lineEdit_1. text() + 
+                             '.' + win.win2.label_10.text() + ' with new ip: ' + str(win.win2.lineEdit_4.text()) )
         win.get_domains()
         win.win2.close()
 
