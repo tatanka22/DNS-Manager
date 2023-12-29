@@ -17,7 +17,7 @@ import winsound
 load_dotenv()
 # api-credentials for domeneshop api
 TOKEN = os.getenv('d_shop_token')
-SECRET = os.getenv('s_shop_secret')
+SECRET = os.getenv('d_shop_secret')
 
 class MyTableView(QTableView):
     def __init__(self, parent=None):
@@ -290,6 +290,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         # Config.ini file setup 
         self.cfg_parser = ConfigParser() 
         if not os.path.exists('config.ini'):    # Makes config.ini, if it does not exist
+            self.cfg_parser['CREDENTIALS'] = {'token': 'your_token', 'secret': 'your_secret', 'registrar': 'xxx', 'endpoint': 'xxx'}
             self.cfg_parser['DEFAULT'] = {'ip_tid': '120', 'sound_alerts': 'True', 'logging': 'True'}
             self.cfg_parser['IP'] = {'ip': '254.254.254.254', 'ip_since_date_time': ''}
             self.cfg_parser['DOMAINS'] = {'Domain1': 'example1.com', 'domain2': 'example2.com'}
@@ -310,8 +311,20 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         # Reads ip and ip_date_time from ini-file
         self.ip_from_ini = self.cfg_parser['IP']['ip']
         self.ip_date_time_from_ini = self.cfg_parser['IP']['ip_since_date_time']
-        
-       
+
+        # Fill account page with registrars info
+        self.registrars = {
+            "Domeneshop": {'endpoint': 'https://api.domeneshop.no/v0/'},
+            "GoDaddy": {'endpoint': 'https://api.godaddy.com/v1'},
+            "Fritun": {'endpoint': 'https://api.fritun.com/v2'}  
+        }
+        for registrar in self.registrars:
+            self.RegistrarInput.addItem(registrar)
+
+        # Fill account page with credentials from .env file
+        self.TokenInput.setText(TOKEN)
+        self.SecretInput.setText(SECRET)
+
         # Gets domains and records and loads them into tableview
         self.get_domains()
 
@@ -326,14 +339,17 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.btn_table.clicked.connect(self.get_domains)
         # Button to update records with new ip
         self.btn_update_dns.clicked.connect(self.ny_ip_actions)
-        
+        # Button to submit registrar credentials
+        self.btn_SubmitCred.clicked.connect(self.submit_cred)
+
         # Connections for click in table to toggle watch value of record      
         self.tableView.clicked.connect(self.table_clicked)
         self.tableView.doubleClicked.connect(self.table_double_clicked)
       
         # Connections for menu choices 
         self.actionSound_alerts.changed.connect(self.actionSound_alerts_changed)
-        self.actionLogging_on.changed.connect(self.actionLogging_on_changed)        
+        self.actionLogging_on.changed.connect(self.actionLogging_on_changed) 
+      
 
         # Validator too only allow numbers in lineEdit
         validator = QRegExpValidator(QRegExp(r'[0-9]+'))
@@ -361,7 +377,24 @@ class MyWindow(QMainWindow, Ui_MainWindow):
             logging.info(my_date_time() + 'Closing program' )
             event.accept() # let the window close
 
-    
+    def submit_cred(self):
+        print("submit_cred")
+        self.token = self.TokenInput.text()
+        self.secret = self.SecretInput.text()
+        self.registrar = self.RegistrarInput.currentText()
+        # Gets the endpoint for the registrar we have chosen from the list of registrars
+        self.endpoint = self.registrars[self.registrar]['endpoint']
+        print(self.token, self.secret, self.registrar, self.endpoint)
+        if self.Check_SaveCred.isChecked():
+            print("Saving credentials")
+            # TODO save credentials in config.ini
+            self.cfg_parser['CREDENTIALS']['token'] = str(self.token)
+            self.cfg_parser['CREDENTIALS']['secret'] = str(self.secret)
+            self.cfg_parser['CREDENTIALS']['registrar'] = str(self.registrar)
+            self.cfg_parser['CREDENTIALS']['endpoint'] = str(self.endpoint)
+            with open('config.ini', 'w') as configfile:
+                self.cfg_parser.write(configfile)
+
     def set_button_clicked(self):                               # Button to set time interval for ip-check        
         self.ip_tid = int(self.lineEdit.text())
         print('Satt ny ip-tid til: ' + str(self.ip_tid) + ' s.')
