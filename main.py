@@ -139,7 +139,7 @@ class TableModel(QAbstractTableModel):
         self._headers = list(data[0].keys()) if data else []
 
     def data(self, index, role):
-        if role == (Qt.DisplayRole or role == Qt.EditRole) and index.column() != 0:
+        if role == Qt.DisplayRole and index.column() != 0:
             row_data = self._data[index.row()]
             column_key = self._headers[index.column()]
             return row_data[column_key]
@@ -151,23 +151,15 @@ class TableModel(QAbstractTableModel):
 
         if role == Qt.ItemDataRole.DecorationRole and index.column() == 0:
             value = self._data[index.row()]
-            value_bool = True
-            value_bool = value['Watch']
-            if isinstance(value_bool, bool):
-                #print('den er bool' + str(value_bool == True))
-                if value_bool == True:
-                    return QIcon('Resources/tick.png')
-                return QIcon('Resources/cross.png')
-            return None
+            valuebol = "True"
+            valuebol = value['Watch']
+            if isinstance(valuebol, bool):
+                if valuebol == True:
+                    # print("hoihoi" + str(valuebol ))
+                    return QIcon('tick.png')
+                return QIcon('cross.png')
             
-    def flags(self, index):
-        return Qt.ItemIsSelectable|Qt.ItemIsEnabled|Qt.ItemIsEditable
-    
-    def setData(self, index, value, role):
-        if role == Qt.EditRole:
-            self._data[index.row()][index.column()] = value
-            return True
-    
+
     def rowCount(self, index):
         return len(self._data)
 
@@ -483,31 +475,12 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         # Toggles the 'Watch' value of the record(Row) in the corresponding dictionary
         row = self.tableView.currentIndex().row() # current row is the one we clicked on
         self.data_rec_list[row]['Watch'] = not self.data_rec_list[row]['Watch']
-        print(self.data_rec_list[row]['Record'])
-        
-        # Update config.ini with new value for 'Watch'  
-        curr_record = self.data_rec_list[row]['Record'] + '.' + self.data_rec_list[row]['Domene']
-        value = self.data_rec_list[row]['Watch']
-        self.cfg_parser['RECORDS'][curr_record] = str(value)
-        with open('config.ini', 'w') as configfile:
-           self.cfg_parser.write(configfile)
 
-        print('We wrote new value for ' + curr_record + ' to config.ini file. ' + 'Watch set to: ' + str(value) )
-        
-        # We also log this to file
-        if self.logging_on == True:
-            logging.info(my_date_time() + 'New value for ' + curr_record +   '  Watch set to: ' + str(value) )
+        print(item_ind.data())
 
-        # Update the view after changes made to data in model
-        self.tableView.model().beginResetModel()
-        self.tableView.model().endResetModel()
-        self.tableView.update()
-
-
-    def get_domains(self):
-        """ Henter domener og records hos registrar. Records ender opp i data_rect_list, en liste av dicts, en dict for hver record.
-            Legger også til kolonne først i dicten med boolean verdi for om vi vil ip-checke det domenet eller ikke.
-            Laster også data inn i tableview."""
+    def get_table_domains(self):
+        #   henter domener og records hos registrar. data om disse ender opp i data_rect_list, en liste av dicts.
+        #   legger også til kolonne først i dicten med bool for om vi vil ip-checke det domenet eller ikke.
         self.data_rec_list =[]
         domains = []
         try:
