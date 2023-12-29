@@ -48,10 +48,12 @@ class MyTableView(QTableView):
         win.win2.label_12.setText(win.data_rec_list[row]['Type'])
         win.win2.lineEdit_3.setText(str(win.data_rec_list[row]['TTL']))
         win.win2.lineEdit_4.setText(win.data_rec_list[row]['IP'])
+       
         # Disable delete and add button in win.win2    
         win.win2.btn_Delete_rec.hide()
         win.win2.btn_Add_rec.hide()
-        # Disable label 13-16
+       
+        # Disable labels and edits we don't need in modify record
         win.win2.label_13.hide()
         win.win2.label_14.hide()
         win.win2.label_15.hide()
@@ -83,15 +85,15 @@ class MyTableView(QTableView):
         win.win2.btn_Submit_rec.hide()
         win.win2.btn_Add_rec.hide()
         
-        # Disable lineEdit_3 and lineEdit_4
+        # Disable labels and edits we don't need in delete record
         win.win2.label_3.hide()
         win.win2.label_4.hide()
-        win.win2.lineEdit_3.hide()
-        win.win2.lineEdit_4.hide()
         win.win2.label_17.hide()
         win.win2.label_18.hide()
         win.win2.lineEdit_1.hide()
         win.win2.lineEdit_2.hide()
+        win.win2.lineEdit_3.hide()
+        win.win2.lineEdit_4.hide()
 
 
     def add_record(self):
@@ -113,7 +115,7 @@ class MyTableView(QTableView):
         win.win2.btn_Submit_rec.hide()
         win.win2.btn_Delete_rec .hide()
         
-        # Disable lineEdit_3 and lineEdit_4
+        # Disable labels we don't need in delete record
         win.win2.label_6.hide()
         win.win2.label.hide()
         win.win2.label_2.hide()
