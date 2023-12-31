@@ -1,6 +1,7 @@
 from requests import get
-import sys
-import os
+import os, sys, base64, hashlib
+from cryptography.fernet import Fernet
+
 from dotenv import load_dotenv
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication, QTableWidget, QMainWindow, QCheckBox, QHeaderView, QTableView
@@ -16,8 +17,8 @@ import winsound
 
 load_dotenv()
 # api-credentials for domeneshop api
-TOKEN = os.getenv('d_shop_token')
-SECRET = os.getenv('d_shop_secret')
+#TOKEN = os.getenv('d_shop_token')
+#SECRET = os.getenv('d_shop_secret')
 
 class MyTableView(QTableView):
     def __init__(self, parent=None):
@@ -276,8 +277,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         Ui_MainWindow.__init__(self)
         self.setupUi(self)
 
-        # Api client for domeneshop
-        self.api_client = Client(TOKEN, SECRET)
+        
 
         # Tableview setup (we now use our own class MyTableView, so we moved it from designer and MyGui.py)
         self.tableView = MyTableView(self.tab)
@@ -292,8 +292,8 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         # Config.ini file setup 
         self.cfg_parser = ConfigParser() 
         if not os.path.exists('config.ini'):    # Makes config.ini, if it does not exist
-            self.cfg_parser['CREDENTIALS'] = {'token': 'your_token', 'secret': 'your_secret', 'registrar': 'xxx', 'endpoint': 'xxx'}
-            self.cfg_parser['DEFAULT'] = {'ip_tid': '120', 'sound_alerts': 'True', 'logging': 'True'}
+            self.cfg_parser['CREDENTIALS'] = {'exampleregistrar':' token secret endpoint'}
+            self.cfg_parser['GENERAL'] = {'ip_tid': '120', 'sound_alerts': 'True', 'logging': 'True'}
             self.cfg_parser['IP'] = {'ip': '254.254.254.254', 'ip_since_date_time': ''}
             self.cfg_parser['DOMAINS'] = {'Domain1': 'example1.com', 'domain2': 'example2.com'}
             self.cfg_parser['RECORDS'] = {'test.example1.com': 'True', 'test2.example1.com': 'False'}
@@ -303,18 +303,60 @@ class MyWindow(QMainWindow, Ui_MainWindow):
 
         # Reads config.ini
         self.cfg_parser.read('config.ini')
-        self.ip_tid = int(self.cfg_parser['DEFAULT']['ip_tid'])
+            
+        # We put any registrars we may have in config.ini into list. Included exampleregistrar(dummy)
+        self.my_registrars = []
+        self.registrars_from_ini = self.cfg_parser['CREDENTIALS']
+
+        if len(self.registrars_from_ini) > 1 :
+            print("We have registrars in config.ini")
+            # As we have registrars and credentials in config.ini we need the passphrase to decrypt
+            # the encrypted credentials
+            self.take_passphrase()
+
+            # We loop through registrars in config.ini and decrypt credentials 
+            # and put them in my_registrars, a list of dicts, one dict for each registrar
+            for i in self.registrars_from_ini:
+                print(i)
+                if(i != 'exampleregistrar'):
+                    mystring = self.registrars_from_ini[i].split(" ")
+                    token_from_ini = mystring[0][1:-1]
+                    #print(token_from_ini + "hoihoi")
+                    token = decrypt(token_from_ini, self.passphrase)
+
+                    secret_from_ini = mystring[1][1:-1]
+                    secret = decrypt(secret_from_ini, self.passphrase)
+                    my_dict = {
+                        'registrar': i, 
+                        'token': token,
+                        'secret': secret,
+                        'endpoint': mystring[2]
+                    }
+                    self.my_registrars.append(my_dict)
+
+        print(self.my_registrars)
+
+        # Api client for domeneshop
+        # We find token and secret for domeneshop in config.ini
+        for i in self.my_registrars:
+            if i['registrar'] == 'domeneshop':
+                print("Found domeneshop credentials in config.ini")
+                self.api_client = Client(i['token'], i['secret'])        
+
+              
+        # Reads ip_tid from ini-file    
+        self.ip_tid = int(self.cfg_parser['GENERAL']['ip_tid'])
         self.lineEdit.setText(str(self.ip_tid))
         # Reads sound on/off
-        self.actionSound_alerts.setChecked(self.cfg_parser['DEFAULT']['sound_alerts'] == 'True')
+        self.actionSound_alerts.setChecked(self.cfg_parser['GENERAL']['sound_alerts'] == 'True')
         # Reads logging on/off
-        self.logging_on = (self.cfg_parser['DEFAULT']['logging'] == 'True')
+        self.logging_on = (self.cfg_parser['GENERAL']['logging'] == 'True')
         self.actionLogging_on.setChecked(self.logging_on)
         # Reads ip and ip_date_time from ini-file
         self.ip_from_ini = self.cfg_parser['IP']['ip']
         self.ip_date_time_from_ini = self.cfg_parser['IP']['ip_since_date_time']
 
-        # Fill account page with registrars info
+        # Fill combox in account page with registrars info
         self.registrars = {
             "Domeneshop": {'endpoint': 'https://api.domeneshop.no/v0/'},
             "GoDaddy": {'endpoint': 'https://api.godaddy.com/v1'},
@@ -324,8 +366,8 @@ class MyWindow(QMainWindow, Ui_MainWindow):
             self.RegistrarInput.addItem(registrar)
 
         # Fill account page with credentials from .env file
-        self.TokenInput.setText(TOKEN)
-        self.SecretInput.setText(SECRET)
+        #self.TokenInput.setText(TOKEN)
+        #self.SecretInput.setText(SECRET)
 
         # Gets domains and records and loads them into tableview
         self.get_domains()
@@ -335,6 +377,8 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         timer1.timeout.connect(self.displayUpdates)
         timer1.start(500)
 
+        # Button to save credentials program
+        self.btn_submit_cred.clicked.connect(self.submit_cred)
         # Button to set time interval for ip-check
         self.btn_set_interval.clicked.connect(self.set_button_clicked)
         # Button to get domains and records from registrar
@@ -342,7 +386,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         # Button to update records with new ip
         self.btn_update_dns.clicked.connect(self.ny_ip_actions)
         # Button to submit registrar credentials
-        self.btn_SubmitCred.clicked.connect(self.submit_cred)
+        #self.btn_SubmitCred.clicked.connect(self.submit_cred)
 
         # Connections for click in table to toggle watch value of record      
         self.tableView.clicked.connect(self.table_clicked)
@@ -369,33 +413,42 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.current_ip_date_time = "onsdag 12.12.1212 00:00:00"
         self.current_ip = "255.255.255.255"
 
+    def take_passphrase(self):
+        self.passphrase, done1 = QtWidgets.QInputDialog.getText(self, 'Get passphrase', 'Please enter your passphrase:') 
         
     def closeEvent(self, event):  # closeEvent is called when the user clicks the X in the upper right corner of the window.
         """This method is called when the user clicks the X in the upper right corner of the window."""
  
-        if win.win2 is not None and win.win2.isVisible():
-            event.ignore()
+        if hasattr(win, 'win2') and win.win2.isVisible():
+                event.ignore()
         else:
             logging.info(my_date_time() + 'Closing program' )
             event.accept() # let the window close
 
     def submit_cred(self):
+        """Denne funksjonen blir kjørt når du trykker på knappen for å submitte credentials for registrar"""
+        # Ideen er at vi legger inn credentials en gang, sammen med egen 'passphrase' som vi må selv huske på
+        # Vi krypterer credentials med denne passphrasen og lagrer det i config.ini kryptert
+        # Når vi starter programmet, trenger vi bare å skrive inn passphrasen for å dekryptere credentials og bruke dem videre
         print("submit_cred")
         self.token = self.TokenInput.text()
         self.secret = self.SecretInput.text()
         self.registrar = self.RegistrarInput.currentText()
-        # Gets the endpoint for the registrar we have chosen from the list of registrars
-        self.endpoint = self.registrars[self.registrar]['endpoint']
+        self.endpoint = self.registrars[self.registrar]['endpoint'] # Gets the endpoint for the registrar we have chosen from list of registrars
+        self.passphrase = self.le_passphrase_input.text()
+
         print(self.token, self.secret, self.registrar, self.endpoint)
         if self.Check_SaveCred.isChecked():
             print("Saving credentials")
-            # TODO save credentials in config.ini
-            self.cfg_parser['CREDENTIALS']['token'] = str(self.token)
-            self.cfg_parser['CREDENTIALS']['secret'] = str(self.secret)
-            self.cfg_parser['CREDENTIALS']['registrar'] = str(self.registrar)
-            self.cfg_parser['CREDENTIALS']['endpoint'] = str(self.endpoint)
+            # We encrypt credentials with passphrase and save them in config.ini
+            self.token_encrypted = encrypt(self.token, self.passphrase)
+            self.secret_encrypted = encrypt(self.secret, self.passphrase)
+                   
+            self.cfg_parser['CREDENTIALS'][self.registrar] = str(self.token_encrypted) + ' ' + str(self.secret_encrypted) + ' ' + str(self.endpoint)
             with open('config.ini', 'w') as configfile:
                 self.cfg_parser.write(configfile)
+        else:
+            print("Not saving credentials. stuff to do here")
 
     def set_button_clicked(self):                               # Button to set time interval for ip-check        
         self.ip_tid = int(self.lineEdit.text())
@@ -411,14 +464,14 @@ class MyWindow(QMainWindow, Ui_MainWindow):
             logging.info(my_date_time() + 'Satt nytt tidsinterval for ip-sjekk : ' + str(self.ip_tid) + ' s. ' )
         
         # We also apply changes to ini file
-        self.cfg_parser['DEFAULT']['ip_tid'] = str(self.ip_tid)
+        self.cfg_parser['GENERAL']['ip_tid'] = str(self.ip_tid)
         with open('config.ini', 'w') as configfile:
             self.cfg_parser.write(configfile)
                        
     
     def actionSound_alerts_changed(self):                       # Menu choice for turning on/off sound alerts
         # Update setting in ini-file
-        self.cfg_parser['DEFAULT']['sound_alerts'] = str(self.actionSound_alerts.isChecked())
+        self.cfg_parser['GENERAL']['sound_alerts'] = str(self.actionSound_alerts.isChecked())
         with open('config.ini', 'w') as configfile:
             self.cfg_parser.write(configfile)
         
@@ -444,7 +497,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
             self.logging_on = False
         
         # Update setting in ini-file
-        self.cfg_parser['DEFAULT']['logging'] = str(self.actionLogging_on.isChecked())
+        self.cfg_parser['GENERAL']['logging'] = str(self.actionLogging_on.isChecked())
         with open('config.ini', 'w') as configfile:
             self.cfg_parser.write(configfile)
 
@@ -542,8 +595,8 @@ class MyWindow(QMainWindow, Ui_MainWindow):
 
                     print(record["id"], record["host"], record["type"], record["data"])
 
-                    # Here we should check if we have a record in config.ini for this record
-                    # if we do, we should use that value for 'Watch' instead of default value False       
+                    # Here we check if we have a record in config.ini for this host
+                    # if we do, we  use that value for 'Watch' instead of default value False       
                     if record["host"] + "." + dom_txt in self.cfg_parser['RECORDS']:  
                         print('We have a record for this domain in config.ini, so we use that value for Watch')  
                         watch_value = self.cfg_parser['RECORDS'][record["host"] + '.' + dom_txt] == 'True'
@@ -719,8 +772,25 @@ class MyWindow(QMainWindow, Ui_MainWindow):
                 self.get_domains()              # for å unngå feil i ny_ip_actions
                 self.ny_ip_actions()
 
+# To make a key(bytestring) from passphrase, encryption/decryption need a 32-byte key.
+def get_key_from_secret(secret):
+    # Create a SHA-256 hash of the secret
+    secret_hash = hashlib.sha256(secret.encode()).digest()
+    # Use base64 to get a 32-byte key
+    key = base64.urlsafe_b64encode(secret_hash)
+    return key
 
-   
+def encrypt(message, secret):
+    key = get_key_from_secret(secret)
+    cipher_suite = Fernet(key)
+    encrypted_message = cipher_suite.encrypt(message.encode())
+    return encrypted_message
+
+def decrypt(encrypted_message, secret):
+    key = get_key_from_secret(secret)
+    cipher_suite = Fernet(key)
+    decrypted_message = cipher_suite.decrypt(encrypted_message).decode()
+    return decrypted_message   
     
 
 def play_sound(sound):
