@@ -1,5 +1,5 @@
-from requests import get
-import os, sys, base64, hashlib
+
+import os, sys, base64, hashlib, requests
 from cryptography.fernet import Fernet
 
 from dotenv import load_dotenv
@@ -17,10 +17,12 @@ import winsound
 
 load_dotenv()
 # api-credentials for domeneshop api
-#TOKEN = os.getenv('d_shop_token')
-#SECRET = os.getenv('d_shop_secret')
+TOKEN = os.getenv('d_shop_token')
+SECRET = os.getenv('d_shop_secret')
 
 class MyTableView(QTableView):
+    """This class is a subclass of QTableView. We use it to override the contextMenuEvent method, 
+        so we can add a context menu to the tableview."""
     def __init__(self, parent=None):
         super(MyTableView, self).__init__(parent)
 
@@ -35,7 +37,6 @@ class MyTableView(QTableView):
 
     def modify_record(self):
         print("Modify record")
-        
         win.win2 = MyCrudWindow()  
         win.win2.setWindowTitle( "Modify record")
         win.win2.show()
@@ -67,7 +68,6 @@ class MyTableView(QTableView):
 
     def delete_record(self):
         print("Delete record")
-
         win.win2 = MyCrudWindow()  
         win.win2.setWindowTitle( "Delete record")
         win.win2.show()
@@ -99,7 +99,6 @@ class MyTableView(QTableView):
 
     def add_record(self):
         print("Add record")
-
         win.win2 = MyCrudWindow()  
         win.win2.setWindowTitle( "Add record")
         win.win2.show()
@@ -136,6 +135,8 @@ class MyTableView(QTableView):
 
       
 class TableModel(QAbstractTableModel):
+    """This class is a subclass of QAbstractTableModel. We use it to override the data method,
+        so we can add icons to the tableview."""
     def __init__(self, data):
         super(TableModel, self).__init__()
         self._data = data
@@ -185,6 +186,8 @@ class TableModel(QAbstractTableModel):
 
 
 class MyCrudWindow(QMainWindow, Ui_CrudWindow):
+    """This class is a subclass of QMainWindow and Ui_CrudWindow. We use it to override the init method,
+        so we can add functionality to the buttons in the CRUD window."""
     
     def __init__(self):
         QtWidgets.QMainWindow.__init__(self)
@@ -198,13 +201,13 @@ class MyCrudWindow(QMainWindow, Ui_CrudWindow):
 
     def submit_rec(self):
         print("update_rec")
-        print(win.win2.label_10.text())             # Domene
-        print(win.win2.label_11.text())             # Record (host)
-        print(win.win2.lineEdit_3.text())           # TTL
-        print(win.win2.lineEdit_4.text())           # IP
-        print(win.win2.label_12.text())             # Type
-        print(win.win2.label_7.text())              # Dom ID    
-        print(win.win2.label_8.text())              # Rec ID    
+        # print(win.win2.label_10.text())             # Domene
+        # print(win.win2.label_11.text())             # Record (host)
+        # print(win.win2.lineEdit_3.text())           # TTL
+        # print(win.win2.lineEdit_4.text())           # IP
+        # print(win.win2.label_12.text())             # Type
+        # print(win.win2.label_7.text())              # Dom ID    
+        # print(win.win2.label_8.text())              # Rec ID    
         
         try:
             myRec = {"host": win.win2.label_11.text(),          # Record (host)
@@ -220,21 +223,22 @@ class MyCrudWindow(QMainWindow, Ui_CrudWindow):
             if win.logging_on == True:
                 logging.info(my_date_time() + 'Could not update record: ' + win.win2.label_11. text() + 
                              '.' + win.win2.label_10.text() + ' with new ip: ' + str(win.win2.lineEdit_4.text()) )
-        win.get_domains()
+        win.get_domains(win.curr_registrar)
         win.win2.close()
 
     def delete_rec(self):
         print("delete_rec")
-        print(win.win2.label_10.text())             # Domene
-        print(win.win2.label_11.text())             # Record (host)
-        print(win.win2.lineEdit_3.text())           # TTL
-        print(win.win2.lineEdit_4.text())           # IP
-        print(win.win2.label_12.text())             # Type
-        print(win.win2.label_7.text())              # Dom ID    
-        print(win.win2.label_8.text())              # Rec ID    
+        # print(win.win2.label_10.text())             # Domene
+        # print(win.win2.label_11.text())             # Record (host)
+        # print(win.win2.lineEdit_3.text())           # TTL
+        # print(win.win2.lineEdit_4.text())           # IP
+        # print(win.win2.label_12.text())             # Type
+        # print(win.win2.label_7.text())              # Dom ID    
+        # print(win.win2.label_8.text())              # Rec ID    
         
         try:
-            win.api_client.delete_record(int(win.win2.label_7.text()), int(win.win2.label_8.text()))
+            requests.delete(win.endpoint + 'domains/' + str(win.win2.label_7.text()) + '/dns/' + str(win.win2.label_8.text()), auth=(win.token, win.secret))
+            #win.api_client.delete_record(int(win.win2.label_7.text()), int(win.win2.label_8.text()))
             print('Record deleted: ' + win.win2.label_11. text() + '.' + win.win2.label_10.text()  )
             if win.logging_on == True:
                 logging.info(my_date_time() + 'Record deleted: ' + win.win2.label_11. text() + 
@@ -245,20 +249,20 @@ class MyCrudWindow(QMainWindow, Ui_CrudWindow):
             if win.logging_on == True:
                 logging.info(my_date_time() + 'Could not delete record: ' + win.win2.label_11. text() + 
                              '.' + win.win2.label_10.text()  )
-        win.get_domains()
+        win.get_domains(win.curr_registrar)
         win.win2.close()
 
     def add_rec(self):
         print("adding rec")
-        
-        
+
         try:
             myRec = {"host": win.win2.lineEdit_1.text(),            # Record (host)
                     "ttl": int(win.win2.lineEdit_3.text()),         # TTL
                     "type": win.win2.lineEdit_2.text(),             # Type
                     "data": str(win.win2.lineEdit_4.text())         # IP
                     }
-            win.api_client.create_record(int(win.win2.label_7.text()), myRec)
+            requests.post(win.endpoint + 'domains/' + str(win.win2.label_7.text()) + '/dns', auth=(win.token, win.secret), json=myRec)
+            #win.api_client.create_record(int(win.win2.label_7.text()), myRec)
             print('Record added: ' + win.win2.lineEdit_1.text() + '.' + win.win2.label_10.text()  )
     
         except:
@@ -267,22 +271,19 @@ class MyCrudWindow(QMainWindow, Ui_CrudWindow):
             if win.logging_on == True:
                 logging.info(my_date_time() + 'Could not create record: ' + win.win2.lineEdit_1. text() + 
                              '.' + win.win2.label_10.text() + ' with new ip: ' + str(win.win2.lineEdit_4.text()) )
-        win.get_domains()
+        win.get_domains(win.curr_registrar)
         win.win2.close()
 
+
 class MyWindow(QMainWindow, Ui_MainWindow):
-   
+    # This is the main program window. everything happens here.
+    # A timer updates the display in display_update every 500 millisecs.
+    # the display also check if it is time to check our ip, and if it is, it does so.
+    
     def __init__(self):
         QtWidgets.QMainWindow.__init__(self)
         Ui_MainWindow.__init__(self)
         self.setupUi(self)
-
-        
-
-        # Tableview setup (we now use our own class MyTableView, so we moved it from designer and MyGui.py)
-        self.tableView = MyTableView(self.tab)
-        self.tableView.setGeometry(QRect(0, 30, 611, 621))
-        self.tableView.setObjectName("tableView")
 
         # Log file/logging setup
         logging.basicConfig(filename='ip-check.log', level=logging.INFO)
@@ -293,7 +294,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.cfg_parser = ConfigParser() 
         if not os.path.exists('config.ini'):    # Makes config.ini, if it does not exist
             self.cfg_parser['CREDENTIALS'] = {'exampleregistrar':' token secret endpoint'}
-            self.cfg_parser['GENERAL'] = {'ip_tid': '120', 'sound_alerts': 'True', 'logging': 'True'}
+            self.cfg_parser['GENERAL'] = {'ip_tid': '120', 'sound_alerts': 'True', 'logging': 'True', 'registrar': 'Examplereg'}
             self.cfg_parser['IP'] = {'ip': '254.254.254.254', 'ip_since_date_time': ''}
             self.cfg_parser['DOMAINS'] = {'Domain1': 'example1.com', 'domain2': 'example2.com'}
             self.cfg_parser['RECORDS'] = {'test.example1.com': 'True', 'test2.example1.com': 'False'}
@@ -301,27 +302,28 @@ class MyWindow(QMainWindow, Ui_MainWindow):
                 self.cfg_parser.write(configfile)    
     
 
-        # Reads config.ini
+        # Reading config.ini and set up variables
         self.cfg_parser.read('config.ini')
-            
-        # We put any registrars we may have in config.ini into list. Included exampleregistrar(dummy)
+        # The specific registrar we are using
+        self.curr_registrar = self.cfg_parser['GENERAL']['registrar']
+
+        # Any registrars we may have in config.ini is still put into a list. Included exampleregistrar(dummy data)
         self.my_registrars = []
         self.registrars_from_ini = self.cfg_parser['CREDENTIALS']
 
         if len(self.registrars_from_ini) > 1 :
             print("We have registrars in config.ini")
             # As we have registrars and credentials in config.ini we need the passphrase to decrypt
-            # the encrypted credentials
-            self.take_passphrase()
+            # the encrypted credentials. We get the passphrase from the user by opening a dialog box
+            self.get_passphrase()     
 
-            # We loop through registrars in config.ini and decrypt credentials 
-            # and put them in my_registrars, a list of dicts, one dict for each registrar
+            # We loop through registrars in config.ini and decrypt credentials. 
+            # We put them in the list my_registrars as dicts, one dict for each registrar
             for i in self.registrars_from_ini:
-                print(i)
+                #print(i)
                 if(i != 'exampleregistrar'):
                     mystring = self.registrars_from_ini[i].split(" ")
                     token_from_ini = mystring[0][1:-1]
-                    #print(token_from_ini + "hoihoi")
                     token = decrypt(token_from_ini, self.passphrase)
 
                     secret_from_ini = mystring[1][1:-1]
@@ -336,27 +338,35 @@ class MyWindow(QMainWindow, Ui_MainWindow):
 
         print(self.my_registrars)
 
-        # Api client for domeneshop
-        # We find token and secret for domeneshop in config.ini
-        for i in self.my_registrars:
-            if i['registrar'] == 'domeneshop':
-                print("Found domeneshop credentials in config.ini")
-                self.api_client = Client(i['token'], i['secret'])        
+        # Tableview setup (we now use our own class MyTableView, so we removed it from designer and MyGui.py)
+        self.tableView = MyTableView(self.tab)
+        self.tableView.setGeometry(QRect(0, 30, 611, 621))
+        self.tableView.setObjectName("tableView")
 
-              
-        # Reads ip_tid from ini-file    
-        self.ip_tid = int(self.cfg_parser['GENERAL']['ip_tid'])
-        self.lineEdit.setText(str(self.ip_tid))
-        # Reads sound on/off
+        # Api client for domeneshop. TODO: make this work for other registrars as well
+        # We find token and secret for domeneshop in config.ini
+        # for i in self.my_registrars:
+        #      if i['registrar'] == 'domeneshop':
+        #          print("Found domeneshop credentials in config.ini")
+        #          self.api_client = Client(i['token'], i['secret'])        
+
+        #  Ip_tid setup from ini-file    
+        self.ip_tid = int(self.cfg_parser['GENERAL']['ip_tid'])         # time interval for ip-check
+        self.le_ip_tid.setText(str(self.ip_tid))
+        
+        # Sound on/off setup
         self.actionSound_alerts.setChecked(self.cfg_parser['GENERAL']['sound_alerts'] == 'True')
-        # Reads logging on/off
+        
+        # Logging on/off setup
         self.logging_on = (self.cfg_parser['GENERAL']['logging'] == 'True')
         self.actionLogging_on.setChecked(self.logging_on)
-        # Reads ip and ip_date_time from ini-file
+        
+        # Ip and ip_date_time setup 
         self.ip_from_ini = self.cfg_parser['IP']['ip']
         self.ip_date_time_from_ini = self.cfg_parser['IP']['ip_since_date_time']
 
-        # Fill combox in account page with registrars info
+        # Fill combobox in account page with available registrars info
+        # This may eventually be a list of registrars we support, and will be a download from our website
         self.registrars = {
             "Domeneshop": {'endpoint': 'https://api.domeneshop.no/v0/'},
             "GoDaddy": {'endpoint': 'https://api.godaddy.com/v1'},
@@ -364,94 +374,84 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         }
         for registrar in self.registrars:
             self.RegistrarInput.addItem(registrar)
-
-        # Fill account page with credentials from .env file
-        #self.TokenInput.setText(TOKEN)
-        #self.SecretInput.setText(SECRET)
-
+       
         # Gets domains and records and loads them into tableview
-        self.get_domains()
+        self.get_domains(self.curr_registrar)
 
         # Timer to trigger display updates. millisecs.
         timer1 = QTimer(self)  
-        timer1.timeout.connect(self.displayUpdates)
+        timer1.timeout.connect(self.display_updates)
         timer1.start(500)
-
-        # Button to save credentials program
-        self.btn_submit_cred.clicked.connect(self.submit_cred)
-        # Button to set time interval for ip-check
-        self.btn_set_interval.clicked.connect(self.set_button_clicked)
-        # Button to get domains and records from registrar
-        self.btn_table.clicked.connect(self.get_domains)
-        # Button to update records with new ip
-        self.btn_update_dns.clicked.connect(self.ny_ip_actions)
-        # Button to submit registrar credentials
-        #self.btn_SubmitCred.clicked.connect(self.submit_cred)
-
-        # Connections for click in table to toggle watch value of record      
-        self.tableView.clicked.connect(self.table_clicked)
+       
+        self.btn_submit_cred.clicked.connect(self.submit_cred)                          # Button to save credentials program
+        self.btn_set_interval.clicked.connect(self.set_button_clicked)                  # Button to set time interval for ip-check
+        self.btn_table.clicked.connect(self.get_domains)                                # Button to get domains and records from registrar
+        self.btn_update_dns.clicked.connect(self.ny_ip_actions)                         # Button to update records with new ip
+        
+        # Connections for doubleclick in table to toggle watch value of record      
+        #self.tableView.clicked.connect(self.table_clicked)
         self.tableView.doubleClicked.connect(self.table_double_clicked)
       
         # Connections for menu choices 
         self.actionSound_alerts.changed.connect(self.actionSound_alerts_changed)
         self.actionLogging_on.changed.connect(self.actionLogging_on_changed) 
-      
-
-        # Validator too only allow numbers in lineEdit
+    
+        # Validator to only allow numbers in lineEdit for ip_tid
         validator = QRegExpValidator(QRegExp(r'[0-9]+'))
-        self.lineEdit.setValidator(validator)
+        self.le_ip_tid.setValidator(validator)
         
         # Diverse
         self.last_date_time = QDateTime.currentDateTime()
         self.next_date_time = QDateTime.currentDateTime()
-
         self.upsince_date_time = QDateTime.currentDateTime()
+        self.retry_ip_secs = 5                                  # time for retrying ipify.org if unavailable
 
-        self.retry_ip_secs = 5              # time for retrying ipfy.org if unavailable
-
-        # Dummy values for current ip as we will not get our ip before first display update
+        # Dummy values for current ip as we will not get our ip before first displayupdate
+        # ip 255....  also flags that we have just started the program
         self.current_ip_date_time = "onsdag 12.12.1212 00:00:00"
         self.current_ip = "255.255.255.255"
 
-    def take_passphrase(self):
+    def get_passphrase(self):
+        """This method is called to open a dialogbox when we need to get the passphrase from the user."""
         self.passphrase, done1 = QtWidgets.QInputDialog.getText(self, 'Get passphrase', 'Please enter your passphrase:') 
         
     def closeEvent(self, event):  # closeEvent is called when the user clicks the X in the upper right corner of the window.
         """This method is called when the user clicks the X in the upper right corner of the window."""
- 
+        # may not be needed as we changed modality of win.win2 to Qt.ApplicationModal
         if hasattr(win, 'win2') and win.win2.isVisible():
-                event.ignore()
+            event.ignore()
         else:
             logging.info(my_date_time() + 'Closing program' )
             event.accept() # let the window close
 
     def submit_cred(self):
         """Denne funksjonen blir kjørt når du trykker på knappen for å submitte credentials for registrar"""
-        # Ideen er at vi legger inn credentials en gang, sammen med egen 'passphrase' som vi må selv huske på
-        # Vi krypterer credentials med denne passphrasen og lagrer det i config.ini kryptert
-        # Når vi starter programmet, trenger vi bare å skrive inn passphrasen for å dekryptere credentials og bruke dem videre
+        # Ideen er at vi legger inn credentials en gang, sammen med egen 'passphrase' som vi selv må huske på
+        # Vi krypterer credentials med denne passphrasen og lagrer dem i config.ini kryptert.
+        # Når vi starter programmet, trenger vi bare å skrive inn passphrasen for å dekryptere credentials fra config.ini og bruke dem videre
+        # TODO : Validating input       
         print("submit_cred")
         self.token = self.TokenInput.text()
         self.secret = self.SecretInput.text()
-        self.registrar = self.RegistrarInput.currentText()
-        self.endpoint = self.registrars[self.registrar]['endpoint'] # Gets the endpoint for the registrar we have chosen from list of registrars
+        self.curr_registrar = self.RegistrarInput.currentText()
+        self.endpoint = self.registrars[self.curr_registrar]['endpoint'] # Gets the endpoint for the registrar we have chosen from list of registrars
         self.passphrase = self.le_passphrase_input.text()
-
-        print(self.token, self.secret, self.registrar, self.endpoint)
+        #print(self.token, self.secret, self.registrar, self.endpoint)
+        
         if self.Check_SaveCred.isChecked():
             print("Saving credentials")
             # We encrypt credentials with passphrase and save them in config.ini
             self.token_encrypted = encrypt(self.token, self.passphrase)
             self.secret_encrypted = encrypt(self.secret, self.passphrase)
                    
-            self.cfg_parser['CREDENTIALS'][self.registrar] = str(self.token_encrypted) + ' ' + str(self.secret_encrypted) + ' ' + str(self.endpoint)
+            self.cfg_parser['CREDENTIALS'][self.curr_registrar] = str(self.token_encrypted) + ' ' + str(self.secret_encrypted) + ' ' + str(self.endpoint)
             with open('config.ini', 'w') as configfile:
                 self.cfg_parser.write(configfile)
         else:
             print("Not saving credentials. stuff to do here")
 
-    def set_button_clicked(self):                               # Button to set time interval for ip-check        
-        self.ip_tid = int(self.lineEdit.text())
+    def set_button_clicked(self):                               # Button to set time interval for ip-check, ip_tid.       
+        self.ip_tid = int(self.le_ip_tid.text())
         print('Satt ny ip-tid til: ' + str(self.ip_tid) + ' s.')
 
         self.next_date_time = self.current_date_time.addSecs(self.ip_tid)
@@ -487,7 +487,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
 
     
     def actionLogging_on_changed(self):                         # Menu choice for turning on/off logging to file
-        # Skriver til logg at vi har slått av/på logging og setter variabel logging_on til True/False
+        # Skriver til logg at vi har slått av/på logging og setter variabelen logging_on til True/False
         # vi bruker den variabelen andre steder vi logger for å sjekke om vi skal logge eller ikke
         if self.actionLogging_on.isChecked() == True:
             logging.info(my_date_time() + 'Logging turned on. Hello world!' )
@@ -516,18 +516,16 @@ class MyWindow(QMainWindow, Ui_MainWindow):
                             "type": "A",
                             "data": str(self.current_ip)
                             }
-                    self.api_client.modify_record(record["Dom ID"], record["Rec ID"], myRec)
+                    #self.api_client.modify_record(record["Dom ID"], record["Rec ID"], myRec)
+                    requests.put(self.endpoint + 'domains/' + str(record["Dom ID"]) + '/dns/' + str(record["Rec ID"]), auth=(self.token, self.secret), json=myRec)
                 except:
                     print('Could not update record: ' + record["Record"] + '.' + record["Domene"] + ' with new ip: ' + self.current_ip)
                     if self.logging_on == True:
                         logging.info(my_date_time() + 'Could not update record: ' + record["Record"] + '.' + record["Domene"] + ' with new ip: ' + self.current_ip )
                     continue
         # As we have updated some records, we can now reload domains and records from registrar
-        self.get_domains()
-       
-        # svar = self.api_client.create_record(1834394, myRec)
-        # print("ffffff" + str(svar))
-        
+        self.get_domains(self.curr_registrar)
+             
 
     def table_clicked(self):
         print("table clicked")
@@ -549,7 +547,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
 
         print('We wrote new value for ' + curr_record + ' to config.ini file. ' + 'Watch set to: ' + str(value) )
         
-        # We also log this to file
+        # We also record this in log file
         if self.logging_on == True:
             logging.info(my_date_time() + 'New value for ' + curr_record +   '  Watch set to: ' + str(value) )
 
@@ -559,14 +557,26 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         self.tableView.update()
 
 
-    def get_domains(self):
+    def get_domains(self, registrar):
         """ Henter domener og records hos registrar. Records ender opp i data_rect_list, en liste av dicts, en dict for hver record.
             Legger også til kolonne først i dicten med boolean verdi for om vi vil ip-checke det domenet eller ikke.
             Laster også data inn i tableview."""
         self.data_rec_list =[]
         domains = []
+        print('getting_domains')
+        
+        for i in self.my_registrars:                # finner token, secret og endpoint for registrar vi skal bruke
+            if i['registrar'] == registrar:
+                #print("Found domeneshop credentials in config.ini")
+                #self.api_client = Client(i['token'], i['secret']) 
+                self.token , self.secret, self.endpoint = i['token'], i['secret'], i['endpoint']
+                print(self.token, self.secret, self.endpoint)
         try:
-            domains = self.api_client.get_domains()
+            resp = requests.get(self.endpoint + 'domains', auth=(self.token, self.secret))
+            #print('halloien')
+            #print(resp)
+            domains = resp.json()
+           
         except:
             print('Could not get domains from registrar')
             if self.logging_on == True:
@@ -577,18 +587,19 @@ class MyWindow(QMainWindow, Ui_MainWindow):
             dom_txt = format(domain["domain"])
             records = []
             print(dom_txt)
-            
+            dom_id = domain["id"]
+            print(self.endpoint + 'domains/' + str(dom_id) + '/dns')
             try:
                 # Get records for this domain
-                records = self.api_client.get_records(domain["id"]) 
+                records = requests.get(self.endpoint + 'domains/' + str(dom_id) + '/dns', auth=(self.token, self.secret)).json()
+                #records = self.api_client.get_records(domain["id"]) 
             except:
                 print('Could not get records for domain: ' + dom_txt)
                 if self.logging_on == True:
                     logging.info(my_date_time() + 'Could not get records for domain: ' + dom_txt )
                 continue
-
+            
             for record in records:
-                               
                 if record["type"] == 'A':#  and record["host"] != '@' :
                     if record["host"] == "@":
                         record["host"] = ""
@@ -649,7 +660,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
             logging.info(my_date_time() +  'get_table_domains: ' + str(self.data_rec_list)   )
 
                
-    def displayUpdates(self):
+    def display_updates(self):
         """Displays time and date in GUI. Also keeps track of when it is time to check our ip."""
         self.current_date_time = QDateTime.currentDateTime()
 
@@ -679,7 +690,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
         print('sjekker-ip hos ipify.org...')
         try:
             #self.current_ip = get('https://api.ipify.org').content.decode('utf8')
-            self.current_ip = get('https://api.ipify.org').text
+            self.current_ip = requests.get('https://api.ipify.org').text
             # Update last and next time for ip-check 
             self.last_date_time = self.current_date_time 
             self.next_date_time = self.current_date_time.addSecs(self.ip_tid)
@@ -804,59 +815,9 @@ def my_date_time():
     dt = ' ' + QDateTime.currentDateTime().toString('dddd dd.MM.yyyy hh:mm:ss' + ' ') 
     return dt
 
-def set_dark_theme(app):
-    palette = QPalette()
-
-    # Set color for different elements:
-    palette.setColor(QPalette.Window, QColor(53, 53, 53))
-    palette.setColor(QPalette.WindowText, Qt.white)
-    palette.setColor(QPalette.Base, QColor(25, 25, 25))
-    palette.setColor(QPalette.AlternateBase, QColor(53, 53, 53))
-    palette.setColor(QPalette.ToolTipBase, Qt.white)
-    palette.setColor(QPalette.ToolTipText, Qt.white)
-    palette.setColor(QPalette.Text, Qt.white)
-    palette.setColor(QPalette.Button, QColor(53, 53, 53))
-    palette.setColor(QPalette.ButtonText, Qt.white)
-    palette.setColor(QPalette.BrightText, Qt.red)
-    palette.setColor(QPalette.Link, QColor(42, 130, 218))
-    palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
-    palette.setColor(QPalette.HighlightedText, Qt.black)
-    
-
-    app.setPalette(palette)
-        # Set the color of the QTabWidget
-    app.setStyleSheet("""
-    QTabWidget::pane { /* The tab widget frame */
-        border-top: 2px solid #C2C7CB;
-    }
-    QTabWidget::tab-bar {
-        left: 5px; /* move to the right by 5px */
-    }
-    QTabBar::tab {
-        background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                    stop: 0 #E1E1E1, stop: 0.4 #DDDDDD,
-                                    stop: 0.5 #D8D8D8, stop: 1.0 #D3D3D3);
-        border: 2px solid #C4C4C3;
-        border-bottom-color: #C2C7CB; /* same as the pane color */
-        border-top-left-radius: 4px;
-        border-top-right-radius: 4px;
-        min-width: 8ex;
-        padding: 2px;
-    }
-    QTabBar::tab:selected, QTabBar::tab:hover {
-        background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
-                                    stop: 0 #fafafa, stop: 0.4 #f4f4f4,
-                                    stop: 0.5 #e7e7e7, stop: 1.0 #fafafa);
-    }
-    QTabBar::tab:selected {
-        border-color: #9B9B9B;
-        border-bottom-color: #C2C7CB; /* same as pane color */
-    }
-    """)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    #set_dark_theme(app)
     win = MyWindow()
     win.show()
     sys.exit(app.exec_())

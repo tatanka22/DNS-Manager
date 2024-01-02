@@ -158,7 +158,7 @@
      <bool>false</bool>
     </property>
     <property name="currentIndex">
-     <number>3</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="tab_main">
      <attribute name="title">
@@ -453,7 +453,7 @@
        <string>88.223.66.89</string>
       </property>
      </widget>
-     <widget class="QLineEdit" name="lineEdit">
+     <widget class="QLineEdit" name="le_ip_tid">
       <property name="geometry">
        <rect>
         <x>430</x>
