@@ -1,8 +1,5 @@
-
 import os, sys, base64, hashlib, requests
 from cryptography.fernet import Fernet
-
-#pipfrom dotenv import load_dotenv
 from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication, QTableWidget, QMainWindow, QCheckBox, QHeaderView, QTableView
 from PyQt5.QtCore import QTimer, QTime, QDate, QDateTime, QRegExp, Qt, QAbstractTableModel, QRect
@@ -732,7 +729,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
 
     def compare_ip(self):        
         """ Function to compare our current ip with the ip previously displayed """ 
-        print('comparing')
+        print('comparing...')
         if self.lbl_current_ip.text() == self.current_ip: 
             # Same ip, no problem..
             print('We have the same ip')
@@ -790,7 +787,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
                             self.cfg_parser.write(configfile)
                                                 
                         self.current_ip_date_time = self.current_date_time.toString('ddd dd.MM.yyyy hh:mm:ss')
-                        self.get_domains()      # for å unngå feil i ny_ip_actions
+                        self.get_domains(self.curr_registrar)      # for å unngå feil i ny_ip_actions
                         self.ny_ip_actions()
             else:
                 # We are here because last displayed ip is different from current_ip, and last_ip displayed is not 255.255.255.255,
@@ -810,7 +807,7 @@ class MyWindow(QMainWindow, Ui_MainWindow):
                 self.get_domains()              # for å unngå feil i ny_ip_actions
                 self.ny_ip_actions()
 
-# To make a key(bytestring) from passphrase, encryption/decryption need a 32-byte key.
+# To make a key(bytestring) from passphrase, encryption/decryption need a 32-byte key./
 def get_key_from_secret(secret):
     # Create a SHA-256 hash of the secret
     secret_hash = hashlib.sha256(secret.encode()).digest()
